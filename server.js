@@ -70,10 +70,16 @@ app.post('/api/face-match', upload.fields([
     res.json(result);
 
   } catch (error) {
+    const status = error.response?.status;
+    const detail = error.response?.data;
     console.error('Face Match Error:', error.message);
-    res.status(500).json({
+    console.error('  Status:', status);
+    console.error('  Response:', JSON.stringify(detail)?.substring(0, 500));
+    console.error('  Token (first 8 chars):', SPRINGSCAN_TOKEN_KEY?.substring(0, 8) + '...');
+    res.status(status || 500).json({
       success: false,
-      error: error.message || 'Internal server error'
+      error: error.message || 'Internal server error',
+      detail: detail
     });
   }
 });
