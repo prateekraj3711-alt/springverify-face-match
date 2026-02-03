@@ -1914,10 +1914,32 @@
         };
 
         // ===========================================
+        // Image Compression (prevents 413 errors)
+        // ===========================================
+        function compressImage(dataUrl, maxWidth = 1024, quality = 0.8) {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    let w = img.width, h = img.height;
+                    if (w > maxWidth) {
+                        h = Math.round(h * maxWidth / w);
+                        w = maxWidth;
+                    }
+                    canvas.width = w;
+                    canvas.height = h;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, w, h);
+                    resolve(canvas.toDataURL('image/jpeg', quality));
+                };
+                img.src = dataUrl;
+            });
+        }
+
+        // ===========================================
         // Initialize
         // ===========================================
         async function init() {
-            // App initialized — using SpringScan API
             console.log('SpringVerify Face Match initialized');
         }
 
@@ -1939,7 +1961,7 @@
         // ===========================================
         // Image Upload Handling
         // ===========================================
-        function handleIdUpload(event) {
+        async function handleIdUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
 
@@ -1955,10 +1977,11 @@
             }
 
             hideError();
-            
+
             const reader = new FileReader();
-            reader.onload = function(e) {
-                state.idImage = e.target.result;
+            reader.onload = async function(e) {
+                // Compress image to avoid 413 errors
+                state.idImage = await compressImage(e.target.result, 1024, 0.8);
                 document.getElementById('idPlaceholder').classList.add('hidden');
                 document.getElementById('idPreview').classList.remove('hidden');
                 document.getElementById('idPreviewImg').src = state.idImage;
@@ -2019,26 +2042,29 @@
             elements.uploadSection.classList.remove('hidden');
         }
 
-        function capturePhoto() {
+        async function capturePhoto() {
             const canvas = document.getElementById('captureCanvas');
             const context = canvas.getContext('2d');
             const video = elements.videoElement;
-            
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            
+
+            // Limit capture resolution to 1024px max
+            let w = video.videoWidth, h = video.videoHeight;
+            if (w > 1024) { h = Math.round(h * 1024 / w); w = 1024; }
+            canvas.width = w;
+            canvas.height = h;
+
             // Mirror the image
             context.translate(canvas.width, 0);
             context.scale(-1, 1);
-            context.drawImage(video, 0, 0);
-            
-            state.selfieImage = canvas.toDataURL('image/jpeg', 0.9);
-            
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            state.selfieImage = canvas.toDataURL('image/jpeg', 0.8);
+
             document.getElementById('selfiePlaceholder').classList.add('hidden');
             document.getElementById('selfiePreview').classList.remove('hidden');
             document.getElementById('selfiePreviewImg').src = state.selfieImage;
             document.getElementById('selfieCard').classList.add('has-image');
-            
+
             stopCamera();
             updateProgress();
             checkReadyState();
