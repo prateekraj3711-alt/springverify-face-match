@@ -28,7 +28,7 @@ const upload = multer({
 
 // API Configuration — SpringScan Face Match
 const SPRINGSCAN_API_URL = 'https://api.springscan.springverify.com/v4/faceMatch';
-const SPRINGSCAN_TOKEN_KEY = process.env.SVD_TOKEN_KEY || process.env.SPRINGSCAN_TOKEN_KEY || '74c07f0ee42db6673d25a86d30b73d96';
+const SPRINGSCAN_TOKEN_KEY = process.env.SVD_TOKEN_KEY || process.env.SPRINGSCAN_TOKEN_KEY || '';
 
 /**
  * Health check
@@ -135,6 +135,7 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`\n🔐 SpringVerify Face Match`);
   console.log(`   Running on port ${PORT}`);
   console.log(`   Face Match API: SpringScan`);
+  console.log(`   Token:  ${SPRINGSCAN_TOKEN_KEY ? 'Configured' : 'NOT SET - add SVD_TOKEN_KEY to Secrets'}`);
   console.log(`   Report: Client-side PDF generation\n`);
 });
 
