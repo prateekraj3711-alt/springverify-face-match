@@ -1,0 +1,2400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Face Match | SpringVerify</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%230828CC' width='100' height='100' rx='20'/%3E%3Cpath d='M30 50 L45 65 L70 35' stroke='%2364CB8B' stroke-width='10' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- PDF Generation Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --primary-light: #818cf8;
+            --primary-50: #eef2ff;
+            --success: #10b981;
+            --success-dark: #059669;
+            --success-bg: #d1fae5;
+            --warning: #f59e0b;
+            --warning-dark: #d97706;
+            --warning-bg: #fef3c7;
+            --error: #ef4444;
+            --error-dark: #dc2626;
+            --error-bg: #fee2e2;
+            --bg-primary: #f8fafc;
+            --bg-card: #ffffff;
+            --text-primary: #0f172a;
+            --text-secondary: #64748b;
+            --text-muted: #94a3b8;
+            --border: #e2e8f0;
+            --border-light: #f1f5f9;
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1);
+            --shadow-xl: 0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1);
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --radius-xl: 24px;
+            --radius-full: 9999px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            min-height: 100dvh;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Mobile App Container */
+        .app-container {
+            max-width: 430px;
+            margin: 0 auto;
+            background: var(--bg-primary);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 0 60px rgba(0,0,0,0.1);
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #0828CC 0%, #0620A8 100%);
+            padding: 14px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0;
+        }
+
+        .logo-img {
+            height: 28px;
+            width: auto;
+        }
+
+        .header-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: white;
+            background: linear-gradient(135deg, #64CB8B 0%, #4CAF7A 100%);
+            padding: 6px 14px;
+            border-radius: var(--radius-full);
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            padding: 24px 20px;
+            padding-bottom: 32px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* Screen Title */
+        .screen-title {
+            text-align: center;
+            padding: 8px 0 16px;
+        }
+
+        .screen-title h1 {
+            font-size: 28px;
+            font-weight: 800;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+            letter-spacing: -0.5px;
+        }
+
+        .screen-title p {
+            font-size: 15px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        /* Progress Steps */
+        .progress-steps {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 8px 20px;
+        }
+
+        .step {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .step-circle {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 700;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 2px solid transparent;
+        }
+
+        .step-circle.active {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+            transform: scale(1.1);
+        }
+
+        .step-circle.completed {
+            background: var(--success);
+            color: white;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+
+        .step-circle.pending {
+            background: var(--border-light);
+            color: var(--text-muted);
+            border-color: var(--border);
+        }
+
+        .step-line {
+            width: 50px;
+            height: 4px;
+            background: var(--border);
+            border-radius: 2px;
+            transition: all 0.4s ease;
+        }
+
+        .step-line.completed {
+            background: linear-gradient(90deg, var(--success) 0%, var(--success-dark) 100%);
+        }
+
+        /* Upload Section */
+        .upload-section {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        /* Info Banner */
+        .info-banner {
+            background: linear-gradient(135deg, var(--primary-50) 0%, #e0e7ff 100%);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            border-radius: var(--radius-lg);
+            padding: 16px;
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+        }
+
+        .info-banner-icon {
+            width: 24px;
+            height: 24px;
+            color: var(--primary);
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+
+        .info-banner-text {
+            font-size: 14px;
+            color: var(--primary-dark);
+            line-height: 1.6;
+        }
+
+        /* Upload Cards */
+        .upload-card {
+            background: var(--bg-card);
+            border: 2px dashed var(--border);
+            border-radius: var(--radius-xl);
+            padding: 28px 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, var(--primary-50) 0%, transparent 100%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .upload-card:hover {
+            border-color: var(--primary-light);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .upload-card:hover::before {
+            opacity: 1;
+        }
+
+        .upload-card.has-image {
+            border-style: solid;
+            border-color: var(--success);
+            padding: 14px;
+            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+        }
+
+        .upload-card.has-image::before {
+            display: none;
+        }
+
+        .upload-card-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .upload-card-icon {
+            width: 64px;
+            height: 64px;
+            background: linear-gradient(135deg, var(--primary-50) 0%, #e0e7ff 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 16px;
+            transition: transform 0.3s ease;
+        }
+
+        .upload-card:hover .upload-card-icon {
+            transform: scale(1.1);
+        }
+
+        .upload-card-icon svg {
+            width: 30px;
+            height: 30px;
+            color: var(--primary);
+        }
+
+        .upload-card h3 {
+            font-size: 17px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 6px;
+        }
+
+        .upload-card p {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .upload-card input {
+            display: none;
+        }
+
+        /* Preview Container */
+        .preview-container {
+            position: relative;
+            width: 100%;
+        }
+
+        .preview-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .preview-label {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.75);
+            color: white;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 5px 12px;
+            border-radius: var(--radius-full);
+            backdrop-filter: blur(4px);
+        }
+
+        .preview-remove {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 32px;
+            height: 32px;
+            background: rgba(239, 68, 68, 0.9);
+            border: none;
+            border-radius: 50%;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+        }
+
+        .preview-remove:hover {
+            transform: scale(1.1);
+            background: var(--error);
+        }
+
+        /* Camera Section */
+        .camera-section {
+            display: none;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .camera-section.active {
+            display: flex;
+        }
+
+        .camera-container {
+            position: relative;
+            background: #000;
+            border-radius: var(--radius-xl);
+            overflow: hidden;
+            aspect-ratio: 3/4;
+            box-shadow: var(--shadow-xl);
+        }
+
+        #videoElement {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1);
+        }
+
+        .camera-overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+        }
+
+        .face-guide {
+            width: 220px;
+            height: 280px;
+            border: 3px solid rgba(255,255,255,0.9);
+            border-radius: 50% 50% 45% 45%;
+            position: relative;
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.3);
+            animation: pulse-guide 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse-guide {
+            0%, 100% { box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.3); }
+            50% { box-shadow: 0 0 0 8px rgba(99, 102, 241, 0.2); }
+        }
+
+        .face-guide::before {
+            content: '';
+            position: absolute;
+            inset: -24px;
+            border: 2px dashed rgba(255,255,255,0.4);
+            border-radius: 50% 50% 45% 45%;
+        }
+
+        .camera-hint {
+            position: absolute;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            color: white;
+            font-size: 14px;
+            font-weight: 500;
+            padding: 10px 20px;
+            border-radius: var(--radius-full);
+            white-space: nowrap;
+            backdrop-filter: blur(8px);
+        }
+
+        .camera-controls {
+            display: flex;
+            gap: 14px;
+        }
+
+        .btn-capture {
+            flex: 1;
+            height: 60px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            border: none;
+            border-radius: var(--radius-lg);
+            color: white;
+            font-size: 17px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 16px rgba(99, 102, 241, 0.3);
+        }
+
+        .btn-capture:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(99, 102, 241, 0.4);
+        }
+
+        .btn-capture:active {
+            transform: translateY(0);
+        }
+
+        .btn-cancel {
+            width: 60px;
+            height: 60px;
+            background: var(--bg-card);
+            border: 2px solid var(--border);
+            border-radius: var(--radius-lg);
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .btn-cancel:hover {
+            border-color: var(--error);
+            color: var(--error);
+            background: var(--error-bg);
+        }
+
+        /* Primary Button */
+        .btn-primary {
+            width: 100%;
+            height: 60px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            border: none;
+            border-radius: var(--radius-lg);
+            color: white;
+            font-size: 17px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            margin-top: 8px;
+            box-shadow: 0 4px 16px rgba(99, 102, 241, 0.3);
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(99, 102, 241, 0.4);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-primary svg {
+            width: 22px;
+            height: 22px;
+        }
+
+        /* Results Section */
+        .results-section {
+            display: none;
+        }
+
+        .results-section.active {
+            display: block;
+        }
+
+        .result-card {
+            background: var(--bg-card);
+            border-radius: var(--radius-xl);
+            padding: 28px 24px;
+            text-align: center;
+            box-shadow: var(--shadow-xl);
+            animation: slideUp 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .result-badge {
+            width: 88px;
+            height: 88px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            animation: scaleIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) 0.2s both;
+        }
+
+        @keyframes scaleIn {
+            from { transform: scale(0); }
+            to { transform: scale(1); }
+        }
+
+        .result-badge.success {
+            background: linear-gradient(135deg, var(--success) 0%, var(--success-dark) 100%);
+            box-shadow: 0 8px 24px rgba(16, 185, 129, 0.4);
+        }
+
+        .result-badge.partial {
+            background: linear-gradient(135deg, var(--warning) 0%, var(--warning-dark) 100%);
+            box-shadow: 0 8px 24px rgba(245, 158, 11, 0.4);
+        }
+
+        .result-badge.fail {
+            background: linear-gradient(135deg, var(--error) 0%, var(--error-dark) 100%);
+            box-shadow: 0 8px 24px rgba(239, 68, 68, 0.4);
+        }
+
+        .result-badge svg {
+            width: 44px;
+            height: 44px;
+            color: white;
+        }
+
+        .result-title {
+            font-size: 24px;
+            font-weight: 800;
+            margin-bottom: 8px;
+            letter-spacing: -0.5px;
+        }
+
+        .result-title.success { color: var(--success); }
+        .result-title.partial { color: var(--warning); }
+        .result-title.fail { color: var(--error); }
+
+        .result-subtitle {
+            font-size: 15px;
+            color: var(--text-secondary);
+            margin-bottom: 28px;
+        }
+
+        /* Score Ring */
+        .score-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 28px;
+        }
+
+        .score-ring {
+            position: relative;
+            width: 160px;
+            height: 160px;
+        }
+
+        .score-ring svg {
+            transform: rotate(-90deg);
+        }
+
+        .score-ring-bg {
+            fill: none;
+            stroke: var(--border-light);
+            stroke-width: 12;
+        }
+
+        .score-ring-progress {
+            fill: none;
+            stroke-width: 12;
+            stroke-linecap: round;
+            transition: stroke-dashoffset 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .score-ring-progress.success { stroke: var(--success); }
+        .score-ring-progress.partial { stroke: var(--warning); }
+        .score-ring-progress.fail { stroke: var(--error); }
+
+        .score-value {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .score-number {
+            font-size: 42px;
+            font-weight: 800;
+            line-height: 1;
+            letter-spacing: -1px;
+        }
+
+        .score-label {
+            font-size: 13px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-top: 4px;
+            font-weight: 600;
+        }
+
+        /* Comparison Images */
+        .comparison-images {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .comparison-item {
+            flex: 1;
+            text-align: center;
+        }
+
+        .comparison-item img {
+            width: 100%;
+            height: 130px;
+            object-fit: cover;
+            border-radius: var(--radius-md);
+            border: 2px solid var(--border);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .comparison-item span {
+            display: block;
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 10px;
+            font-weight: 600;
+        }
+
+        /* Details List */
+        .details-list {
+            background: var(--bg-primary);
+            border-radius: var(--radius-lg);
+            padding: 4px 16px;
+            text-align: left;
+        }
+
+        .detail-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .detail-item:last-child {
+            border-bottom: none;
+        }
+
+        .detail-label {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .detail-value {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .detail-value.success { color: var(--success); }
+        .detail-value.warning { color: var(--warning); }
+        .detail-value.error { color: var(--error); }
+
+        /* Actions */
+        .result-actions {
+            display: flex;
+            gap: 14px;
+            margin-top: 24px;
+        }
+
+        .btn-secondary {
+            flex: 1;
+            height: 52px;
+            background: var(--bg-card);
+            border: 2px solid var(--border);
+            border-radius: var(--radius-md);
+            color: var(--text-primary);
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            background: var(--primary-50);
+        }
+
+        .btn-success {
+            flex: 1;
+            height: 52px;
+            background: linear-gradient(135deg, var(--success) 0%, var(--success-dark) 100%);
+            border: none;
+            border-radius: var(--radius-md);
+            color: white;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4);
+        }
+
+        /* Loading Overlay */
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(255,255,255,0.97);
+            z-index: 1000;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 24px;
+            backdrop-filter: blur(8px);
+        }
+
+        .loading-overlay.active {
+            display: flex;
+        }
+
+        .loading-animation {
+            position: relative;
+            width: 100px;
+            height: 100px;
+        }
+
+        .loading-face {
+            width: 80px;
+            height: 80px;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            border: 3px solid var(--border);
+            animation: face-scan 2s ease-in-out infinite;
+        }
+
+        @keyframes face-scan {
+            0%, 100% { 
+                border-color: var(--border);
+                box-shadow: 0 0 0 0 rgba(99, 102, 241, 0);
+            }
+            50% { 
+                border-color: var(--primary);
+                box-shadow: 0 0 0 10px rgba(99, 102, 241, 0.1);
+            }
+        }
+
+        .loading-scan-line {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 100px;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            transform: translateX(-50%);
+            animation: scan 1.5s ease-in-out infinite;
+        }
+
+        @keyframes scan {
+            0%, 100% { top: 20%; opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { top: 80%; opacity: 0; }
+        }
+
+        .loading-text {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .loading-subtext {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        /* Error Message */
+        .error-message {
+            background: var(--error-bg);
+            border: 1px solid var(--error);
+            border-radius: var(--radius-md);
+            padding: 14px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+            animation: shake 0.5s ease-in-out;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        .error-message svg {
+            width: 20px;
+            height: 20px;
+            color: var(--error);
+            flex-shrink: 0;
+        }
+
+        .error-message span {
+            font-size: 14px;
+            color: var(--error-dark);
+        }
+
+        /* Hidden utility */
+        .hidden {
+            display: none !important;
+        }
+
+        /* ============================================= */
+        /* PDF Report Template — Admin Style              */
+        /* ============================================= */
+        .report-wrapper {
+            display: none;
+            margin-top: 20px;
+        }
+
+        .report-wrapper.active {
+            display: block;
+        }
+
+        .report-content {
+            background: #ffffff;
+            width: 595px;
+            max-width: 100%;
+            margin: 0 auto;
+            font-family: 'Montserrat', sans-serif;
+            color: #333333;
+            overflow: hidden;
+            border: 1px solid #c4dcff;
+        }
+
+        /* --- Admin Report Header --- */
+        .report-header {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 24px 10px 24px;
+            border-bottom: 1px solid #E4E7EC;
+        }
+
+        .report-header-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .report-header-logo {
+            width: 40px;
+            height: auto;
+            max-height: 40px;
+            border-radius: 10px;
+        }
+
+        .report-header-company-name {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 600;
+            color: #333333;
+            font-size: 14px;
+            line-height: 20px;
+            max-width: 330px;
+        }
+
+        .report-header-right {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+        .report-header-sv-logo {
+            height: 15px;
+            width: auto;
+        }
+
+        .report-header-verification-txt {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+            line-height: 20px;
+            color: #0A30F5;
+        }
+
+        /* --- Check Header (Face Match) --- */
+        .report-check-header {
+            margin: 8px 24px 14px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .report-check-header-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .report-check-icon {
+            background: linear-gradient(148.04deg, #ffe7df 28.54%, rgba(255, 255, 255, 0) 152.26%);
+            border-radius: 4px;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .report-check-icon svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .report-check-text {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+            color: #333333;
+            line-height: 20px;
+        }
+
+        .report-check-badge {
+            padding: 4px 6px 4px 3px;
+            border-radius: 12px;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 12px;
+            font-weight: 500;
+            line-height: 18px;
+            text-transform: capitalize;
+        }
+
+        .report-check-badge.success {
+            background: #d1fae5;
+            color: #059669;
+        }
+
+        .report-check-badge.partial {
+            background: #fef3c7;
+            color: #d97706;
+        }
+
+        .report-check-badge.fail {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+
+        /* --- Status Bar --- */
+        .report-status-bar {
+            margin: 0 24px;
+        }
+
+        .report-status-bar-inner {
+            border-top-left-radius: 8px;
+            border-top-right-radius: 8px;
+            padding: 0px 12px;
+            height: 28px;
+            display: flex;
+            text-align: center;
+            align-items: center;
+        }
+
+        .report-status-bar-inner.success { background-color: #10b981; }
+        .report-status-bar-inner.partial { background-color: #f59e0b; }
+        .report-status-bar-inner.fail { background-color: #ef4444; }
+
+        .report-status-bar-text {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+            color: #ffffff;
+            line-height: 20px;
+        }
+
+        .report-status-name {
+            background-color: #ffffff;
+            border: #D6DCE5 1px solid;
+            border-radius: 8px;
+            min-width: 300px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            height: 36px;
+            margin: 0 24px;
+        }
+
+        .report-status-name-text {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+            color: #333333;
+            line-height: 20px;
+        }
+
+        /* --- DPDF Table (Data Provided / Data Found) --- */
+        .report-dpdf-card {
+            margin: 14px 24px 0 24px;
+            border: #E4E7EC 1px solid;
+            border-radius: 0;
+        }
+
+        .report-dpdf-header {
+            display: flex;
+            background-color: #f9fafb;
+            border-bottom: #E4E7EC 1px solid;
+        }
+
+        .report-dpdf-header-cell {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 12px;
+            font-weight: 500;
+            color: #303030;
+            line-height: 18px;
+            padding: 6px 9px;
+        }
+
+        .report-dpdf-col-check { width: 147px; }
+        .report-dpdf-col-dp { width: 200px; }
+        .report-dpdf-col-df { width: 200px; }
+
+        .report-dpdf-row {
+            display: flex;
+            border-bottom: #E4E7EC 1px solid;
+            break-inside: avoid;
+        }
+
+        .report-dpdf-row:last-child {
+            border-bottom: none;
+        }
+
+        .report-dpdf-cell {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 11px;
+            font-weight: 400;
+            color: #4e4e4e;
+            line-height: 15px;
+            padding: 6px 9px;
+            word-break: break-word;
+            display: flex;
+            align-items: flex-start;
+            gap: 4px;
+        }
+
+        .report-dpdf-cell svg {
+            width: 14px;
+            height: 14px;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+
+        .report-dpdf-cell-check {
+            width: 147px;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 11px;
+            font-weight: 400;
+            color: #4e4e4e;
+            line-height: 15px;
+            padding: 6px 9px;
+        }
+
+        /* --- Comparison Images Section --- */
+        .report-images {
+            padding: 14px 24px;
+            display: flex;
+            gap: 16px;
+            background: #ffffff;
+            border: #E4E7EC 1px solid;
+            margin: 14px 24px 0 24px;
+        }
+
+        .report-image-card {
+            flex: 1;
+            text-align: center;
+        }
+
+        .report-image-card img {
+            width: 100%;
+            height: 140px;
+            object-fit: cover;
+            border-radius: 4px;
+            border: 1px solid #E4E7EC;
+        }
+
+        .report-image-card span {
+            display: block;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 10px;
+            color: #4e4e4e;
+            margin-top: 6px;
+            font-weight: 500;
+            line-height: 14px;
+        }
+
+        /* --- Score Section (Admin Style) --- */
+        .report-score-section {
+            padding: 16px 24px;
+            text-align: center;
+            background: #ffffff;
+        }
+
+        .report-score-ring {
+            position: relative;
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 12px;
+        }
+
+        .report-score-ring svg {
+            transform: rotate(-90deg);
+        }
+
+        .report-score-ring .ring-bg {
+            fill: none;
+            stroke: #E4E7EC;
+            stroke-width: 10;
+        }
+
+        .report-score-ring .ring-progress {
+            fill: none;
+            stroke-width: 10;
+            stroke-linecap: round;
+        }
+
+        .report-score-ring .ring-progress.success { stroke: #10b981; }
+        .report-score-ring .ring-progress.partial { stroke: #f59e0b; }
+        .report-score-ring .ring-progress.fail { stroke: #ef4444; }
+
+        .report-score-value {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .report-score-number {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 28px;
+            font-weight: 700;
+            line-height: 1;
+            color: #333333;
+        }
+
+        .report-score-label {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 10px;
+            color: #4e4e4e;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 4px;
+            font-weight: 500;
+        }
+
+        /* --- Disclaimer (Admin Warning Footer Style) --- */
+        .report-disclaimer {
+            padding: 8px 20px;
+            background-color: #f1fafd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 38px;
+            margin: 14px 24px 0 24px;
+        }
+
+        .report-disclaimer-title {
+            min-width: 135px;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 8px;
+            font-weight: 500;
+            color: #4e4e4e;
+            line-height: 12px;
+        }
+
+        .report-disclaimer-text {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 8px;
+            font-weight: 400;
+            color: #4e4e4e;
+            line-height: 12px;
+        }
+
+        .report-disclaimer-text svg {
+            width: 16px;
+            height: 16px;
+            flex-shrink: 0;
+        }
+
+        /* --- Footer Banner (Admin Style) --- */
+        .report-footer-banner {
+            background-color: #f1fafd;
+            padding: 8px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 6px 0 0 0;
+        }
+
+        .report-footer-banner-left {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 8px;
+            font-weight: 500;
+            color: #4e4e4e;
+            line-height: 12px;
+        }
+
+        .report-footer-banner-right {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 8px;
+            font-weight: 400;
+            color: #4e4e4e;
+            line-height: 12px;
+        }
+
+        .report-footer-banner-right svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        /* --- Pagination Footer (Admin Style) --- */
+        .report-footer-pagination {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 30px;
+            width: 100%;
+            padding: 0 24px;
+        }
+
+        .report-footer-page-info {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .report-footer-page-number {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 10px;
+            font-weight: 600;
+            color: #333333;
+            line-height: 14px;
+            width: 22px;
+            height: 22px;
+            border-radius: 6px;
+            background: #f0f4ff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .report-footer-page-name {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 10px;
+            font-weight: 500;
+            color: #303030;
+            line-height: 16px;
+        }
+
+        .report-footer-sv-text {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 10px;
+            font-weight: 400;
+            color: #0828cc;
+            line-height: 14px;
+        }
+
+        /* --- Declaration (Admin Style) --- */
+        .report-declaration {
+            margin: 14px 24px 0 24px;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 10px;
+            color: #333333;
+            font-weight: 400;
+            line-height: 13px;
+            text-align: justify;
+        }
+
+        .report-declaration p {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 10px;
+            color: #333333;
+            font-weight: 400;
+            line-height: 13px;
+            margin-bottom: 6px;
+        }
+
+        /* Generating PDF overlay */
+        .pdf-generating {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(255,255,255,0.95);
+            z-index: 2000;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            backdrop-filter: blur(4px);
+        }
+
+        .pdf-generating.active {
+            display: flex;
+        }
+
+        .pdf-spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .pdf-generating-text {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        /* Responsive */
+        @media (min-width: 431px) {
+            body {
+                padding: 24px;
+            }
+            
+            .app-container {
+                border-radius: var(--radius-xl);
+                min-height: calc(100vh - 48px);
+                min-height: calc(100dvh - 48px);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTE5IiBoZWlnaHQ9IjM3IiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxwYXRoIGQ9Im0xNS4wNzguMDYxIDE0LjEgNS4zMDdhMi4yMiAyLjIyIDAgMCAxIDEuNDIgMi41MTRsLTEuMzUgNi42NzktNC41NDQgOC40OTItOS4zMTggMTMuNzZMNC4wMzkgMjQuOTIxIDE1LjA3OC4wNjFaIiBmaWxsPSIjMDgyOENDIi8+PHBhdGggZD0ibTE1LjA2Ny4wNjEuMzA4IDM2Ljc0OEw0LjAzNCAyNC45MjEuMDU0IDcuOTA0YTIuMjE4IDIuMjE4IDAgMCAxIDEuMzg3LTIuNTY3TDE1LjA2Ny4wNjFaIiBmaWxsPSIjMDgyOENDIi8+PHBhdGggZD0iTTI2LjYxOCAyNS42OTEgMTUuNDM1IDM2LjkzOWwtOS4zMzctOS45NCAzLjAxLTIuODM3IDYuMzE1IDYuMzkxIDEzLjUxOS0xNC4yNTQtMS4wNDcgNi44NTlhNC41NzUgNC41NzUgMCAwIDEtMS4yNzcgMi41MzNaIiBmaWxsPSIjNjRDQjhCIi8+PHBhdGggZD0iTTE1LjQyNyAyNy41MzV2OS40bC05LjMzMi05Ljk0LS42MTEtMS44ODQgMy40NzMtNC4yNjEgNi40NyA2LjY4NVoiIGZpbGw9IiM2NENCOEIiLz48cGF0aCBkPSJtNC4wNTUgMjQuNzE2IDEuOTg0IDIuMjg1IDIuMzY0LTIuMDE1YS45MTUuOTE1IDAgMCAxIDEuMjM2LjA0Nmw1Ljc3MyA1LjcwNyAxMy40MjYtMTMuNzMxLjY0Mi00LjA2OS0xNC4wNjggMTMuODg0LTUuNzYzLTUuODc1YS45MTUuOTE1IDAgMCAwLTEuMjU3LS4wNDZsLTQuMzM3IDMuODE0WiIgZmlsbD0iI2ZmZiIvPjxwYXRoIGZpbGwtcnVsZT0iZXZlbm9kZCIgY2xpcC1ydWxlPSJldmVub2RkIiBkPSJNMjAuNjk4IDYuMDU0cy03Ljc3Ny0uMzIzLTEwLjExIDMuMTlhNy4wMTkgNy4wMTkgMCAwIDAtMS4wNSAyLjcxNiA4LjggOC44IDAgMCAwLS4xMjEgMS4xMzYgMTEuNDgzIDExLjQ4MyAwIDAgMCAuMzczIDMuMjg0Yy4xNTUtLjIxNS4zNDItLjQ2OC41NjQtLjc1LjE2LS4yMDYuMzM3LS40MjQuNTI4LS42NS4xOS0uMjI2LjQtLjQ1OS42MS0uNy4yMTItLjI0MS40NDItLjQ3Ni42NzgtLjcxNC4yNC0uMjM1LjQ3Ni0uNDgxLjczLS43MDYuMjU2LS4yMjUuNS0uNDU4Ljc1OS0uNjY3bC4yNzUtLjIyOS4xLS4wODYuMzgzLS4yODkuMzY5LS4yOC4zNjctLjI0NmMuMjM4LS4xNi40Ni0uMzEzLjY3OC0uNDMzbC41ODQtLjM0Mi40NjYtLjIzLjQtLjItLjM2NS4yNy0uNDE2LjMwOC0uNTEzLjQzN2MtLjE5MS4xNTQtLjM4Mi4zNDItLjU4Ni41MzlsLS4zMTIuMy0uMjMzLjI0OC0uMDc3LjA4My0uMzIuMzQyLS4zMS4zNjdjLS4xLjExMS0uMTkyLjIyNy0uMjg2LjM0NC0uMDc2LjA5My0uMTUxLjE5MS0uMjI1LjI4N2wtLjEuMTMzYy0uMi4yNDgtLjM4LjUxNy0uNTY1Ljc3MmwtLjAxNC4wMmMtLjE4Ni4yNjUtLjM2LjUzNC0uNTI4Ljc5LS4xNy4yNTYtLjMyNC41MTItLjQ2Mi43NTlzLS4yNzUuNDc1LS4zOTEuNjkyYy0uMjM2LjQzMS0uNDE2LjgtLjUzNSAxLjA1M2wtLjA0LjA4NmE5LjEzMSA5LjEzMSAwIDAgMCAzLjg0LjMyOSA2LjYyIDYuNjIgMCAwIDAgMS4wNDYtLjIzOSA2LjAzIDYuMDMgMCAwIDAgMS44Mi0uOTM5IDcgNyAwIDAgMCAyLjE2NC0zLjY0NmMuMTA3LS4zNTkuMi0uNzI2LjI4LTEuMDk1YTI3LjQ3IDI3LjQ3IDAgMCAwIC41NDUtNi4wNDUiIGZpbGw9IiNmZmYiLz48cGF0aCBkPSJNNDEuOTkgMTQuNDIyYTIuMTQ4IDIuMTQ4IDAgMCAwLS43OTktLjY1OCAyLjM5MiAyLjM5MiAwIDAgMC0xLjEzNC0uMjY2Yy0uMjI0IDAtLjQ1My4wMzMtLjY4Ni4wOTgtLjIyNC4wNTYtLjQzLjE1NC0uNjE2LjI5NC0uMTg3LjEzLS4zNC4yOTktLjQ2Mi41MDRhMS40MTggMS40MTggMCAwIDAtLjE2OC43MTRjMCAuMjcuMDUxLjUuMTU0LjY4Ni4xMTIuMTc3LjI1Ny4zMzEuNDM0LjQ2Mi4xODcuMTIxLjQwMS4yMjkuNjQ0LjMyMmwuNzk4LjI2NmMuMzM2LjEwMy42NzcuMjIgMS4wMjIuMzUuMzQ2LjEzLjY1OC4zMDMuOTM4LjUxOC4yOC4yMTUuNTA5LjQ4NS42ODYuODEyLjE3Ny4zMTcuMjY2LjcyMy4yNjYgMS4yMTggMCAuNTEzLS4wOTguOTYxLS4yOTQgMS4zNDRhMi43NTQgMi43NTQgMCAwIDEtLjc1Ni45MzggMy4zMTQgMy4zMTQgMCAwIDEtMS4xMDYuNTQ2Yy0uNDEuMTIxLS44MzUuMTgyLTEuMjc0LjE4MmE0LjcyNyA0LjcyNyAwIDAgMS0xLjgyLS4zNjQgMy42MDggMy42MDggMCAwIDEtMS40NDItMS4wNzhsMS4wNzgtLjkxYy4yMzMuMzQ1LjU0Ni42MjUuOTM4Ljg0YTIuNjEgMi42MSAwIDAgMCAxLjI3NC4zMjJjLjIzMyAwIC40NjctLjAzMy43LS4wOTguMjMzLS4wNjUuNDQ0LS4xNjguNjMtLjMwOC4xOTYtLjE0LjM1NS0uMzEzLjQ3Ni0uNTE4LjEyMi0uMjE1LjE4Mi0uNDcxLjE4Mi0uNzcgMC0uMjk5LS4wNjUtLjU0Ni0uMTk2LS43NDJhMS41NyAxLjU3IDAgMCAwLS41MDQtLjUxOCAzLjE0NiAzLjE0NiAwIDAgMC0uNzU2LS4zNSAyNC42NiAyNC42NiAwIDAgMC0uODk2LS4zMDggOC42MyA4LjYzIDAgMCAxLS45MzgtLjMzNiAzLjUzNCAzLjUzNCAwIDAgMS0uODI2LS41MTggMi40NzMgMi40NzMgMCAwIDEtLjU4OC0uNzg0Yy0uMTUtLjMwOC0uMjI0LS42OS0uMjI0LTEuMTQ4IDAtLjQ5NS4wOTgtLjkyLjI5NC0xLjI3NC4yMDYtLjM1NS40NjctLjY0OS43ODQtLjg4Mi4zMjctLjIzMy42OS0uNDAxIDEuMDkyLS41MDQuNDEtLjExMi44MjItLjE2OCAxLjIzMi0uMTY4LjU3OSAwIDEuMTIuMTAzIDEuNjI0LjMwOC41MDQuMjA1LjkxLjQ4IDEuMjE4LjgyNmwtLjk4Ljk1MlptNC4yODggMTEuNDM4aC0xLjMxNnYtOS45OTZoMS4yODhWMTYuOWguMDQyYy4yMTUtLjM1NS41MjctLjY0NC45MzgtLjg2OC40Mi0uMjMzLjkwNS0uMzUgMS40NTYtLjM1LjQ5NSAwIC45NDMuMDg5IDEuMzQ0LjI2Ni40MS4xNzcuNzYuNDI1IDEuMDUuNzQyLjI5OS4zMTcuNTI3LjY5LjY4NiAxLjEyLjE1OS40Mi4yMzguODczLjIzOCAxLjM1OCAwIC40ODUtLjA4Ljk0My0uMjM4IDEuMzcyLS4xNTkuNDMtLjM4My44MDMtLjY3MiAxLjEyLS4yOS4zMTctLjY0LjU3LTEuMDUuNzU2LS40MS4xNzctLjg3My4yNjYtMS4zODYuMjY2YTMuMDIgMy4wMiAwIDAgMS0xLjM0NC0uMzA4IDIuNDMyIDIuNDMyIDAgMCAxLS45OTQtLjg2OGgtLjA0MnY0LjM1NFptNC4zNjgtNi42OTJjMC0uMzA4LS4wNDctLjYwNy0uMTQtLjg5NmEyLjI4OCAyLjI4OCAwIDAgMC0uNDItLjc3IDEuOTk1IDEuOTk1IDAgMCAwLS43LS41MzIgMi4xNjcgMi4xNjcgMCAwIDAtLjk1Mi0uMTk2Yy0uMzM2IDAtLjY0NC4wNjUtLjkyNC4xOTYtLjI3LjEzLS41MDQuMzA4LS43LjUzMi0uMTk2LjIyNC0uMzUuNDgtLjQ2Mi43N2EyLjcgMi43IDAgMCAwLS4xNTQuOTFjMCAuMzE3LjA1MS42Mi4xNTQuOTEuMTEyLjI5LjI2Ni41NDYuNDYyLjc3LjE5Ni4yMTUuNDMuMzg3LjcuNTE4LjI4LjEzLjU4OC4xOTYuOTI0LjE5Ni4zNjQgMCAuNjgxLS4wNjUuOTUyLS4xOTYuMjgtLjE0LjUxMy0uMzIyLjctLjU0Ni4xODctLjIyNC4zMjctLjQ4LjQyLS43Ny4wOTMtLjI5LjE0LS41ODguMTQtLjg5NlptMy4xODktMS44NzZhMjEuMjIgMjEuMjIgMCAwIDAtLjA1Ni0xLjQyOGgxLjI0NmExMi41NjMgMTIuNTYzIDAgMCAxIC4wNTYgMS4xMmguMDQyYy4xODctLjM5Mi40NTctLjcwNS44MTItLjkzOC4zNjQtLjI0My43Ny0uMzY0IDEuMjE4LS4zNjQuMjA1IDAgLjM3OC4wMTkuNTE4LjA1NmwtLjA1NiAxLjIxOGEyLjQ3NCAyLjQ3NCAwIDAgMC0uNjAyLS4wN2MtLjMxNyAwLS41OTMuMDYtLjgyNi4xODItLjIzMy4xMTItLjQzLjI2Ni0uNTg4LjQ2Mi0uMTUuMTk2LS4yNjEuNDI1LS4zMzYuNjg2YTIuNzk3IDIuNzk3IDAgMCAwLS4xMTIuNzk4VjIyLjVoLTEuMzE2di01LjIwOFptNi40MDIgNS4yMDhoLTEuMzE2di02LjYzNmgxLjMxNlYyMi41Wm0uMjI0LTkuMDNhLjc3My43NzMgMCAwIDEtLjI2Ni42MDIuODY0Ljg2NCAwIDAgMS0uNjE2LjIzOC44NjQuODY0IDAgMCAxLS42MTYtLjIzOC44MjIuODIyIDAgMCAxLS4yNTItLjYwMmMwLS4yNDMuMDg0LS40NDMuMjUyLS42MDJhLjgzOC44MzggMCAwIDEgLjYxNi0uMjUyYy4yNDMgMCAuNDQ4LjA4NC42MTYuMjUyLjE3OC4xNTkuMjY2LjM2LjI2Ni42MDJabTMuMjYgMi4zOTRhMTEuNjIzIDExLjYyMyAwIDAgMSAuMDU2IDEuMDkyaC4wNDFjLjA4NC0uMTc3LjE5Ni0uMzQuMzM2LS40OWEyLjM1IDIuMzUgMCAwIDEgLjUwNC0uNDA2IDIuMzEgMi4zMSAwIDAgMSAuNjE2LS4yOGMuMjI0LS4wNjUuNDU4LS4wOTguNy0uMDk4LjQzIDAgLjc5OC4wNzUgMS4xMDYuMjI0YTIuMTY2IDIuMTY2IDAgMCAxIDEuMjE4IDEuNDI4Yy4xMDMuMzI3LjE1NC42NzcuMTU0IDEuMDVWMjIuNWgtMS4zMTZ2LTMuNjgyYzAtLjI3LS4wMjMtLjUyNy0uMDctLjc3YTEuNzU3IDEuNzU3IDAgMCAwLS4yMjQtLjY0NCAxLjI1MiAxLjI1MiAwIDAgMC0uNDYyLS40NDhjLS4xOTYtLjExMi0uNDQ4LS4xNjgtLjc1Ni0uMTY4LS41MjIgMC0uOTUyLjItMS4yODguNjAyLS4zMjYuMzkyLS40OS45Mi0uNDkgMS41ODJWMjIuNUg2Mi41M3YtNS4yMDhhMjEuMjIgMjEuMjIgMCAwIDAtLjA1Ni0xLjQyOGgxLjI0NlptNy40NzYgNy43N2MuMjg5LjMyNy42NDguNTg4IDEuMDc4Ljc4NC40MzguMTk2Ljg4Ni4yOTQgMS4zNDQuMjk0LjQzOCAwIC44MDctLjA2NSAxLjEwNi0uMTk2LjI5OC0uMTIxLjUzNi0uMjk0LjcxNC0uNTE4YTEuODMgMS44MyAwIDAgMCAuMzkyLS43N2MuMDg0LS4yOTkuMTI2LS42Mi4xMjYtLjk2NnYtLjg1NGgtLjAyOGEyLjMzNiAyLjMzNiAwIDAgMS0uOTk0Ljg1NCAzLjE0IDMuMTQgMCAwIDEtMS4zNDQuMjk0Yy0uNTA0IDAtLjk2Ni0uMDg5LTEuMzg2LS4yNjYtLjQxMS0uMTc3LS43NjEtLjQyLTEuMDUtLjcyOGEzLjI4NCAzLjI4NCAwIDAgMS0uNjcyLTEuMDc4IDMuNzcgMy43NyAwIDAgMS0uMjM4LTEuMzQ0YzAtLjQ3Ni4wNzktLjkyNC4yMzgtMS4zNDQuMTU4LS40Mi4zODItLjc4NC42NzItMS4wOTIuMjg5LS4zMTcuNjM5LS41NjUgMS4wNS0uNzQyLjQxLS4xODcuODY4LS4yOCAxLjM3Mi0uMjguNDc2IDAgLjkyOC4xMDMgMS4zNTguMzA4LjQzOC4yMDUuNzg0LjUxOCAxLjAzNi45MzhoLjAyOHYtMS4wNjRoMS4yNzR2Ni4zYzAgLjQ4NS0uMDYxLjk0Ny0uMTgyIDEuMzg2LS4xMjIuNDQ4LS4zMjcuODQtLjYxNiAxLjE3Ni0uMjkuMzQ1LS42NjguNjItMS4xMzQuODI2LS40NjcuMjA1LTEuMDQ2LjMwOC0xLjczNi4zMDhhNS4wNzYgNS4wNzYgMCAwIDEtMS43NS0uMzIyIDQuMzU4IDQuMzU4IDAgMCAxLTEuNDk4LS44ODJsLjg0LTEuMDIyWm0uNDA2LTQuNTIyYzAgLjMwOC4wNDYuNjAyLjE0Ljg4Mi4xMDIuMjguMjQ3LjUyNy40MzQuNzQyLjE5Ni4yMTUuNDI5LjM4Ny43LjUxOC4yNy4xMy41NzguMTk2LjkyNC4xOTZhMi4zIDIuMyAwIDAgMCAuOTI0LS4xODJjLjI4LS4xMjEuNTE4LS4yODUuNzE0LS40OS4xOTYtLjIxNS4zNDUtLjQ2Mi40NDgtLjc0Mi4xMTItLjI5LjE2OC0uNTk3LjE2OC0uOTI0YTIuMzkgMi4zOSAwIDAgMC0uMTY4LS44OTYgMi4xMTcgMi4xMTcgMCAwIDAtLjQ2Mi0uNzQyIDIuMDY0IDIuMDY0IDAgMCAwLS43MTQtLjUwNCAyLjA2NiAyLjA2NiAwIDAgMC0uOTEtLjE5NmMtLjM0NiAwLS42NTQuMDY1LS45MjQuMTk2LS4yNzEuMTIxLS41MDQuMjktLjcuNTA0YTIuMTYyIDIuMTYyIDAgMCAwLS40MzQuNzQyYy0uMDk0LjI4LS4xNC41NzktLjE0Ljg5NlpNODQuMzI2IDIyLjVoLTIuMzk0bC0zLjc1Mi05LjkxMmgyLjY4OGwyLjI5NiA3LjAyOGguMDU2bDIuMjgyLTcuMDI4aDIuNjQ2TDg0LjMyNiAyMi41Wm04LjcxOC00LjI4NGExLjM2IDEuMzYgMCAwIDAtLjM1LS45MzhjLS4yMjUtLjI2MS0uNTY1LS4zOTItMS4wMjMtLjM5Mi0uMjI0IDAtLjQyOS4wMzctLjYxNi4xMTItLjE4Ni4wNjUtLjM1LjE1OS0uNDkuMjgtLjE0LjEyMS0uMjUxLjI2Ni0uMzM1LjQzNGExLjIgMS4yIDAgMCAwLS4xNC41MDRoMi45NTNabTIuMTE0Ljg4MnYuMjhjMCAuMDkzLS4wMDUuMTgyLS4wMTQuMjY2aC01LjA1NWMuMDIuMTk2LjA3NS4zNzMuMTY4LjUzMi4xMDMuMTU5LjIzLjI5OS4zNzguNDJhMS44OTIgMS44OTIgMCAwIDAgMS4xMi4zNjRjLjM2NCAwIC42NzItLjA2NS45MjQtLjE5NmExLjkgMS45IDAgMCAwIC42MTctLjUzMmwxLjU5NSAxLjAwOGMtLjMyNi40NzYtLjc2Ljg0NS0xLjMwMiAxLjEwNi0uNTMxLjI1Mi0xLjE1Mi4zNzgtMS44NjEuMzc4LS41MjMgMC0xLjAxOC0uMDgtMS40ODQtLjIzOGEzLjg0NCAzLjg0NCAwIDAgMS0xLjIzMy0uNzE0IDMuNTA1IDMuNTA1IDAgMCAxLS44MjUtMS4xNjJjLS4xOTctLjQ1Ny0uMjk1LS45OC0uMjk1LTEuNTY4IDAtLjU3LjA5OS0xLjA4My4yOTQtMS41NC4xOTctLjQ2Ny40NjItLjg1OS43OTktMS4xNzZhMy41IDMuNSAwIDAgMSAxLjE5LS43NTYgNC4wNyA0LjA3IDAgMCAxIDEuNDgzLS4yNjZjLjUxNCAwIC45ODUuMDg5IDEuNDE1LjI2Ni40MjkuMTY4Ljc5Ny40MTUgMS4xMDUuNzQyLjMwOC4zMjcuNTQ2LjcyMy43MTQgMS4xOS4xNzguNDY3LjI2Ni45OTkuMjY2IDEuNTk2Wm01Ljk0NS0xLjY5NGExLjc2MiAxLjc2MiAwIDAgMC0uMzA4LS4wNTYgMi44MDcgMi44MDcgMCAwIDAtLjI4LS4wMTRjLS4zMDggMC0uNTY5LjA1Ni0uNzg0LjE2OGExLjY5MyAxLjY5MyAwIDAgMC0uNTA0LjQwNmMtLjEyMS4xNTktLjIxLjMzMS0uMjY2LjUxOC0uMDU2LjE4Ny0uMDg0LjM1LS4wODQuNDlWMjIuNWgtMi4yOTZ2LTYuOTcyaDIuMjEydjEuMDA4aC4wMjhjLjE3OC0uMzU1LjQzLS42NDQuNzU2LS44NjhhMS45NTYgMS45NTYgMCAwIDEgMS4xMzQtLjMzNmMuMDk0IDAgLjE4Mi4wMDUuMjY2LjAxNC4wOTQuMDEuMTY4LjAyMy4yMjQuMDQybC0uMDk4IDIuMDE2Wm0zLjUyMS00LjEwMmMwIC4xNzctLjAzNy4zNDUtLjExMi41MDQtLjA2NS4xNS0uMTU5LjI4LS4yOC4zOTItLjExMi4xMTItLjI1Mi4yLS40Mi4yNjZhMS4zMTQgMS4zMTQgMCAwIDEtLjUwNC4wOTggMS4zIDEuMyAwIDAgMS0uOTM4LS4zNjQgMS4yMjUgMS4yMjUgMCAwIDEtLjM3OC0uODk2YzAtLjE2OC4wMzMtLjMyNy4wOTgtLjQ3NmExLjEzIDEuMTMgMCAwIDEgLjI4LS40MDZjLjEyMS0uMTEyLjI2MS0uMi40Mi0uMjY2YTEuMiAxLjIgMCAwIDEgLjUxOC0uMTEyYy4xNzcgMCAuMzQ1LjAzMy41MDQuMDk4LjE2OC4wNjUuMzA4LjE1NC40Mi4yNjYuMTIxLjExMi4yMTUuMjQ3LjI4LjQwNi4wNzUuMTUuMTEyLjMxMy4xMTIuNDlaTTEwMi4xNiAyMi41di02Ljk3MmgyLjI5NlYyMi41aC0yLjI5NlptOC40NDEtOC44OWEyLjAzNyAyLjAzNyAwIDAgMC0uNjMtLjA5OGMtLjIxNSAwLS4zODguMDM3LS41MTguMTEyYS44MDYuODA2IDAgMCAwLS4zMDguMzA4IDEuMTggMS4xOCAwIDAgMC0uMTU0LjQyIDIuNzM0IDIuNzM0IDAgMCAwLS4wNDIuNDc2di43aDEuNTU0djEuNzIyaC0xLjU1NHY1LjI1aC0yLjI5NnYtNS4yNWgtMS4yNzR2LTEuNzIyaDEuMjc0di0uNjcyYzAtLjQzLjA0Ni0uODM1LjE0LTEuMjE4LjA5My0uMzkyLjI1Mi0uNzMzLjQ3Ni0xLjAyMi4yMzMtLjI5OS41NDEtLjUzMi45MjQtLjcuMzkyLS4xNzcuODc3LS4yNjYgMS40NTYtLjI2Ni4xOTYgMCAuMzg3LjAxNC41NzQuMDQyLjE5Ni4wMTkuMzczLjA1MS41MzIuMDk4bC0uMTU0IDEuODJabTQuNzA3IDkuOTRjLS4xNC4zNjQtLjI5OC42ODYtLjQ3Ni45NjZhMi42IDIuNiAwIDAgMS0uNjE2LjcyOCAyLjI5IDIuMjkgMCAwIDEtLjg0LjQ2MiAzLjY5OCAzLjY5OCAwIDAgMS0xLjEzNC4xNTRjLS4yMTQgMC0uNDM4LS4wMTQtLjY3Mi0uMDQyYTQuMTI4IDQuMTI4IDAgMCAxLS41ODgtLjExMmwuMjUyLTEuOTMyYTIuMSAyLjEgMCAwIDAgLjM2NC4wODRjLjE0LjAyOC4yNjYuMDQyLjM3OC4wNDIuMzU1IDAgLjYxMi0uMDg0Ljc3LS4yNTIuMTU5LS4xNTkuMjk0LS4zODcuNDA2LS42ODZsLjIyNC0uNTc0LTIuOTEyLTYuODZoMi41NDhsMS41NTQgNC40OGguMDQybDEuMzg2LTQuNDhoMi40MzZsLTMuMTIyIDguMDIyWiIgZmlsbD0iI2ZmZiIvPjwvc3ZnPg==" alt="SpringVerify" class="logo-img">
+            </div>
+            <span class="header-title">Face Match</span>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Upload Section -->
+            <section id="uploadSection" class="upload-section">
+                <div class="screen-title">
+                    <h1>Identity Verification</h1>
+                    <p>Match your face with ID document photo</p>
+                </div>
+
+                <!-- Progress Steps -->
+                <div class="progress-steps">
+                    <div class="step">
+                        <div class="step-circle active" id="step1">1</div>
+                    </div>
+                    <div class="step-line" id="line1"></div>
+                    <div class="step">
+                        <div class="step-circle pending" id="step2">2</div>
+                    </div>
+                    <div class="step-line" id="line2"></div>
+                    <div class="step">
+                        <div class="step-circle pending" id="step3">3</div>
+                    </div>
+                </div>
+
+                <!-- Error Message -->
+                <div id="errorMessage" class="error-message hidden">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <path d="M12 8v4m0 4h.01"/>
+                    </svg>
+                    <span id="errorText">Error message here</span>
+                </div>
+
+                <!-- Info Banner -->
+                <div class="info-banner">
+                    <svg class="info-banner-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <path d="M12 16v-4M12 8h.01"/>
+                    </svg>
+                    <span class="info-banner-text">Upload a government-issued ID (Aadhaar, PAN, Passport, Voter ID) and take a live selfie to verify identity.</span>
+                </div>
+
+                <!-- ID Upload Card -->
+                <div class="upload-card" id="idUploadCard" onclick="document.getElementById('idInput').click()">
+                    <div id="idPlaceholder" class="upload-card-content">
+                        <div class="upload-card-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="4" width="18" height="16" rx="2"/>
+                                <circle cx="9" cy="10" r="2"/>
+                                <path d="M15 8h2M15 12h2"/>
+                                <path d="M7 16h10"/>
+                            </svg>
+                        </div>
+                        <h3>Upload ID Document</h3>
+                        <p>Aadhaar, PAN Card, Passport, or Voter ID</p>
+                    </div>
+                    <div id="idPreview" class="preview-container hidden">
+                        <img id="idPreviewImg" class="preview-image" src="" alt="ID Preview">
+                        <span class="preview-label">📄 ID Document</span>
+                        <button class="preview-remove" onclick="event.stopPropagation(); removeImage('id')">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                <path d="M18 6L6 18M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <input type="file" id="idInput" accept="image/*" onchange="handleIdUpload(event)">
+                </div>
+
+                <!-- Selfie Card -->
+                <div class="upload-card" id="selfieCard" onclick="startCamera()">
+                    <div id="selfiePlaceholder" class="upload-card-content">
+                        <div class="upload-card-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
+                                <circle cx="12" cy="13" r="4"/>
+                            </svg>
+                        </div>
+                        <h3>Take Live Selfie</h3>
+                        <p>Tap to open camera and capture your face</p>
+                    </div>
+                    <div id="selfiePreview" class="preview-container hidden">
+                        <img id="selfiePreviewImg" class="preview-image" src="" alt="Selfie Preview">
+                        <span class="preview-label">📸 Live Selfie</span>
+                        <button class="preview-remove" onclick="event.stopPropagation(); removeImage('selfie')">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                <path d="M18 6L6 18M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Verify Button -->
+                <button class="btn-primary" id="verifyBtn" disabled onclick="verifyFaces()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 12l2 2 4-4"/>
+                        <circle cx="12" cy="12" r="10"/>
+                    </svg>
+                    Verify Face Match
+                </button>
+            </section>
+
+            <!-- Camera Section -->
+            <section id="cameraSection" class="camera-section">
+                <div class="screen-title">
+                    <h1>Capture Selfie</h1>
+                    <p>Position your face within the guide</p>
+                </div>
+
+                <div class="camera-container">
+                    <video id="videoElement" autoplay playsinline></video>
+                    <div class="camera-overlay">
+                        <div class="face-guide"></div>
+                        <span class="camera-hint">Keep your face centered & well-lit</span>
+                    </div>
+                </div>
+
+                <div class="camera-controls">
+                    <button class="btn-capture" onclick="capturePhoto()">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <circle cx="12" cy="12" r="6" fill="currentColor"/>
+                        </svg>
+                        Capture Photo
+                    </button>
+                    <button class="btn-cancel" onclick="stopCamera()">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M18 6L6 18M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+            </section>
+
+            <!-- Results Section -->
+            <section id="resultsSection" class="results-section">
+                <div class="result-card">
+                    <div class="result-badge" id="resultBadge">
+                        <svg id="resultIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <path d="M20 6L9 17l-5-5"/>
+                        </svg>
+                    </div>
+                    <h2 class="result-title" id="resultTitle">Face Match Verified</h2>
+                    <p class="result-subtitle" id="resultSubtitle">Identity verification successful</p>
+
+                    <!-- Score Ring -->
+                    <div class="score-container">
+                        <div class="score-ring">
+                            <svg width="160" height="160">
+                                <circle class="score-ring-bg" cx="80" cy="80" r="68"/>
+                                <circle class="score-ring-progress" id="scoreProgress" cx="80" cy="80" r="68" 
+                                    stroke-dasharray="427" stroke-dashoffset="427"/>
+                            </svg>
+                            <div class="score-value">
+                                <span class="score-number" id="scoreNumber">0%</span>
+                                <span class="score-label">Match</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Comparison Images -->
+                    <div class="comparison-images">
+                        <div class="comparison-item">
+                            <img id="resultIdImg" src="" alt="ID Photo">
+                            <span>ID Document</span>
+                        </div>
+                        <div class="comparison-item">
+                            <img id="resultSelfieImg" src="" alt="Selfie">
+                            <span>Live Selfie</span>
+                        </div>
+                    </div>
+
+                    <!-- Details -->
+                    <div class="details-list">
+                        <div class="detail-item">
+                            <span class="detail-label">Verification Status</span>
+                            <span class="detail-value" id="detailStatus">Verified</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Confidence Level</span>
+                            <span class="detail-value" id="detailConfidence">High</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Liveness Check</span>
+                            <span class="detail-value success" id="detailLiveness">Passed</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Request ID</span>
+                            <span class="detail-value" id="detailRequestId">--</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Processed At</span>
+                            <span class="detail-value" id="detailTime">--</span>
+                        </div>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="result-actions">
+                        <button class="btn-secondary" onclick="resetApp()">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M3 12a9 9 0 019-9 9.75 9.75 0 016.74 2.74L21 8"/>
+                                <path d="M21 3v5h-5"/>
+                                <path d="M21 12a9 9 0 01-9 9 9.75 9.75 0 01-6.74-2.74L3 16"/>
+                                <path d="M8 16H3v5"/>
+                            </svg>
+                            Verify Another
+                        </button>
+                        <button class="btn-success" onclick="downloadReport()">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                                <polyline points="7,10 12,15 17,10"/>
+                                <line x1="12" y1="15" x2="12" y2="3"/>
+                            </svg>
+                            Download
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- PDF Report Content (hidden, used for PDF generation — Admin Style) -->
+            <div class="report-wrapper" id="reportWrapper">
+                <div class="report-content" id="reportContent">
+
+                    <!-- Admin Report Header -->
+                    <div class="report-header">
+                        <div class="report-header-left">
+                            <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiByeD0iMTAiIGZpbGw9IiMwODI4Q0MiLz48cGF0aCBkPSJNMTIgMjAgTDE4IDI2IEwyOCAxNCIgc3Ryb2tlPSIjNjRDQjhCIiBzdHJva2Utd2lkdGg9IjMiIGZpbGw9Im5vbmUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPjwvc3ZnPg==" alt="Company Logo" class="report-header-logo">
+                            <span class="report-header-company-name" id="rptCompanyName">SpringVerify</span>
+                        </div>
+                        <div class="report-header-right">
+                            <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTE5IiBoZWlnaHQ9IjM3IiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxwYXRoIGQ9Im0xNS4wNzguMDYxIDE0LjEgNS4zMDdhMi4yMiAyLjIyIDAgMCAxIDEuNDIgMi41MTRsLTEuMzUgNi42NzktNC41NDQgOC40OTItOS4zMTggMTMuNzZMNC4wMzkgMjQuOTIxIDE1LjA3OC4wNjFaIiBmaWxsPSIjMDgyOENDIi8+PHBhdGggZD0ibTE1LjA2Ny4wNjEuMzA4IDM2Ljc0OEw0LjAzNCAyNC45MjEuMDU0IDcuOTA0YTIuMjE4IDIuMjE4IDAgMCAxIDEuMzg3LTIuNTY3TDE1LjA2Ny4wNjFaIiBmaWxsPSIjMDgyOENDIi8+PHBhdGggZD0iTTI2LjYxOCAyNS42OTEgMTUuNDM1IDM2LjkzOWwtOS4zMzctOS45NCAzLjAxLTIuODM3IDYuMzE1IDYuMzkxIDEzLjUxOS0xNC4yNTQtMS4wNDcgNi44NTlhNC41NzUgNC41NzUgMCAwIDEtMS4yNzcgMi41MzNaIiBmaWxsPSIjNjRDQjhCIi8+PHBhdGggZD0iTTE1LjQyNyAyNy41MzV2OS40bC05LjMzMi05Ljk0LS42MTEtMS44ODQgMy40NzMtNC4yNjEgNi40NyA2LjY4NVoiIGZpbGw9IiM2NENCOEIiLz48cGF0aCBkPSJtNC4wNTUgMjQuNzE2IDEuOTg0IDIuMjg1IDIuMzY0LTIuMDE1YS45MTUuOTE1IDAgMCAxIDEuMjM2LjA0Nmw1Ljc3MyA1LjcwNyAxMy40MjYtMTMuNzMxLjY0Mi00LjA2OS0xNC4wNjggMTMuODg0LTUuNzYzLTUuODc1YS45MTUuOTE1IDAgMCAwLTEuMjU3LS4wNDZsLTQuMzM3IDMuODE0WiIgZmlsbD0iI2ZmZiIvPjxwYXRoIGZpbGwtcnVsZT0iZXZlbm9kZCIgY2xpcC1ydWxlPSJldmVub2RkIiBkPSJNMjAuNjk4IDYuMDU0cy03Ljc3Ny0uMzIzLTEwLjExIDMuMTlhNy4wMTkgNy4wMTkgMCAwIDAtMS4wNSAyLjcxNiA4LjggOC44IDAgMCAwLS4xMjEgMS4xMzYgMTEuNDgzIDExLjQ4MyAwIDAgMCAuMzczIDMuMjg0Yy4xNTUtLjIxNS4zNDItLjQ2OC41NjQtLjc1LjE2LS4yMDYuMzM3LS40MjQuNTI4LS42NS4xOS0uMjI2LjQtLjQ1OS42MS0uNy4yMTItLjI0MS40NDItLjQ3Ni42NzgtLjcxNC4yNC0uMjM1LjQ3Ni0uNDgxLjczLS43MDYuMjU2LS4yMjUuNS0uNDU4Ljc1OS0uNjY3bC4yNzUtLjIyOS4xLS4wODYuMzgzLS4yODkuMzY5LS4yOC4zNjctLjI0NmMuMjM4LS4xNi40Ni0uMzEzLjY3OC0uNDMzbC41ODQtLjM0Mi40NjYtLjIzLjQtLjItLjM2NS4yNy0uNDE2LjMwOC0uNTEzLjQzN2MtLjE5MS4xNTQtLjM4Mi4zNDItLjU4Ni41MzlsLS4zMTIuMy0uMjMzLjI0OC0uMDc3LjA4My0uMzIuMzQyLS4zMS4zNjdjLS4xLjExMS0uMTkyLjIyNy0uMjg2LjM0NC0uMDc2LjA5My0uMTUxLjE5MS0uMjI1LjI4N2wtLjEuMTMzYy0uMi4yNDgtLjM4LjUxNy0uNTY1Ljc3MmwtLjAxNC4wMmMtLjE4Ni4yNjUtLjM2LjUzNC0uNTI4Ljc5LS4xNy4yNTYtLjMyNC41MTItLjQ2Mi43NTlzLS4yNzUuNDc1LS4zOTEuNjkyYy0uMjM2LjQzMS0uNDE2LjgtLjUzNSAxLjA1M2wtLjA0LjA4NmE5LjEzMSA5LjEzMSAwIDAgMCAzLjg0LjMyOSA2LjYyIDYuNjIgMCAwIDAgMS4wNDYtLjIzOSA2LjAzIDYuMDMgMCAwIDAgMS44Mi0uOTM5IDcgNyAwIDAgMCAyLjE2NC0zLjY0NmMuMTA3LS4zNTkuMi0uNzI2LjI4LTEuMDk1YTI3LjQ3IDI3LjQ3IDAgMCAwIC41NDUtNi4wNDUiIGZpbGw9IiNmZmYiLz48cGF0aCBkPSJNNDEuOTkgMTQuNDIyYTIuMTQ4IDIuMTQ4IDAgMCAwLS43OTktLjY1OCAyLjM5MiAyLjM5MiAwIDAgMC0xLjEzNC0uMjY2Yy0uMjI0IDAtLjQ1My4wMzMtLjY4Ni4wOTgtLjIyNC4wNTYtLjQzLjE1NC0uNjE2LjI5NC0uMTg3LjEzLS4zNC4yOTktLjQ2Mi41MDRhMS40MTggMS40MTggMCAwIDAtLjE2OC43MTRjMCAuMjcuMDUxLjUuMTU0LjY4Ni4xMTIuMTc3LjI1Ny4zMzEuNDM0LjQ2Mi4xODcuMTIxLjQwMS4yMjkuNjQ0LjMyMmwuNzk4LjI2NmMuMzM2LjEwMy42NzcuMjIgMS4wMjIuMzUuMzQ2LjEzLjY1OC4zMDMuOTM4LjUxOC4yOC4yMTUuNTA5LjQ4NS42ODYuODEyLjE3Ny4zMTcuMjY2LjcyMy4yNjYgMS4yMTggMCAuNTEzLS4wOTguOTYxLS4yOTQgMS4zNDRhMi43NTQgMi43NTQgMCAwIDEtLjc1Ni45MzggMy4zMTQgMy4zMTQgMCAwIDEtMS4xMDYuNTQ2Yy0uNDEuMTIxLS44MzUuMTgyLTEuMjc0LjE4MmE0LjcyNyA0LjcyNyAwIDAgMS0xLjgyLS4zNjQgMy42MDggMy42MDggMCAwIDEtMS40NDItMS4wNzhsMS4wNzgtLjkxYy4yMzMuMzQ1LjU0Ni42MjUuOTM4Ljg0YTIuNjEgMi42MSAwIDAgMCAxLjI3NC4zMjJjLjIzMyAwIC40NjctLjAzMy43LS4wOTguMjMzLS4wNjUuNDQ0LS4xNjguNjMtLjMwOC4xOTYtLjE0LjM1NS0uMzEzLjQ3Ni0uNTE4LjEyMi0uMjE1LjE4Mi0uNDcxLjE4Mi0uNzcgMC0uMjk5LS4wNjUtLjU0Ni0uMTk2LS43NDJhMS41NyAxLjU3IDAgMCAwLS41MDQtLjUxOCAzLjE0NiAzLjE0NiAwIDAgMC0uNzU2LS4zNSAyNC42NiAyNC42NiAwIDAgMC0uODk2LS4zMDggOC42MyA4LjYzIDAgMCAxLS45MzgtLjMzNiAzLjUzNCAzLjUzNCAwIDAgMS0uODI2LS41MTggMi40NzMgMi40NzMgMCAwIDEtLjU4OC0uNzg0Yy0uMTUtLjMwOC0uMjI0LS42OS0uMjI0LTEuMTQ4IDAtLjQ5NS4wOTgtLjkyLjI5NC0xLjI3NC4yMDYtLjM1NS40NjctLjY0OS43ODQtLjg4Mi4zMjctLjIzMy42OS0uNDAxIDEuMDkyLS41MDQuNDEtLjExMi44MjItLjE2OCAxLjIzMi0uMTY4LjU3OSAwIDEuMTIuMTAzIDEuNjI0LjMwOC41MDQuMjA1LjkxLjQ4IDEuMjE4LjgyNmwtLjk4Ljk1MloiIGZpbGw9IiNmZmYiLz48L3N2Zz4=" alt="SpringVerify" class="report-header-sv-logo">
+                            <span class="report-header-verification-txt">Verification Report</span>
+                        </div>
+                    </div>
+
+                    <!-- Check Header: Face Match -->
+                    <div class="report-check-header">
+                        <div class="report-check-header-left">
+                            <div class="report-check-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="#BC7964" stroke-width="2">
+                                    <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
+                                    <circle cx="12" cy="7" r="4"/>
+                                </svg>
+                            </div>
+                            <span class="report-check-text">Face Match Verification</span>
+                        </div>
+                        <span class="report-check-badge" id="rptCheckBadge">Verified</span>
+                    </div>
+
+                    <!-- Status Bar -->
+                    <div class="report-status-bar">
+                        <div class="report-status-bar-inner" id="rptStatusBar">
+                            <span class="report-status-bar-text" id="rptStatusBarText">VERIFIED</span>
+                        </div>
+                    </div>
+                    <div class="report-status-name">
+                        <span class="report-status-name-text">Face Match &mdash; Identity Check</span>
+                    </div>
+
+                    <!-- Score Ring -->
+                    <div class="report-score-section">
+                        <div class="report-score-ring">
+                            <svg width="120" height="120">
+                                <circle class="ring-bg" cx="60" cy="60" r="50"/>
+                                <circle class="ring-progress" id="rptScoreRing" cx="60" cy="60" r="50"
+                                    stroke-dasharray="314.16" stroke-dashoffset="314.16"/>
+                            </svg>
+                            <div class="report-score-value">
+                                <span class="report-score-number" id="rptScoreNumber">0%</span>
+                                <span class="report-score-label">Match Score</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Comparison Images -->
+                    <div class="report-images">
+                        <div class="report-image-card">
+                            <img id="rptIdImg" src="" alt="ID Document">
+                            <span>Document (Data Provided)</span>
+                        </div>
+                        <div class="report-image-card">
+                            <img id="rptSelfieImg" src="" alt="Live Selfie">
+                            <span>Selfie (Data Found)</span>
+                        </div>
+                    </div>
+
+                    <!-- DPDF Table: Verification Details -->
+                    <div class="report-dpdf-card">
+                        <!-- Table Header -->
+                        <div class="report-dpdf-header">
+                            <div class="report-dpdf-header-cell report-dpdf-col-check">Check</div>
+                            <div class="report-dpdf-header-cell report-dpdf-col-dp">Data Provided</div>
+                            <div class="report-dpdf-header-cell report-dpdf-col-df">Data Found</div>
+                        </div>
+                        <!-- Table Rows -->
+                        <div class="report-dpdf-row">
+                            <div class="report-dpdf-cell-check report-dpdf-col-check">Match Score</div>
+                            <div class="report-dpdf-cell report-dpdf-col-dp" id="rptDpScore">--</div>
+                            <div class="report-dpdf-cell report-dpdf-col-df" id="rptDfScore">--</div>
+                        </div>
+                        <div class="report-dpdf-row">
+                            <div class="report-dpdf-cell-check report-dpdf-col-check">Match Band</div>
+                            <div class="report-dpdf-cell report-dpdf-col-dp" id="rptDpBand">--</div>
+                            <div class="report-dpdf-cell report-dpdf-col-df" id="rptDfBand">--</div>
+                        </div>
+                        <div class="report-dpdf-row">
+                            <div class="report-dpdf-cell-check report-dpdf-col-check">Confidence</div>
+                            <div class="report-dpdf-cell report-dpdf-col-dp" id="rptDpConfidence">--</div>
+                            <div class="report-dpdf-cell report-dpdf-col-df" id="rptDfConfidence">--</div>
+                        </div>
+                        <div class="report-dpdf-row">
+                            <div class="report-dpdf-cell-check report-dpdf-col-check">Verification Status</div>
+                            <div class="report-dpdf-cell report-dpdf-col-dp" id="rptDpStatus">--</div>
+                            <div class="report-dpdf-cell report-dpdf-col-df" id="rptDfStatus">--</div>
+                        </div>
+                        <div class="report-dpdf-row">
+                            <div class="report-dpdf-cell-check report-dpdf-col-check">Liveness</div>
+                            <div class="report-dpdf-cell report-dpdf-col-dp" id="rptDpLiveness">--</div>
+                            <div class="report-dpdf-cell report-dpdf-col-df" id="rptDfLiveness">--</div>
+                        </div>
+                        <div class="report-dpdf-row">
+                            <div class="report-dpdf-cell-check report-dpdf-col-check">Face 1 Quality</div>
+                            <div class="report-dpdf-cell report-dpdf-col-dp" id="rptDpFace1">--</div>
+                            <div class="report-dpdf-cell report-dpdf-col-df" id="rptDfFace1">--</div>
+                        </div>
+                        <div class="report-dpdf-row">
+                            <div class="report-dpdf-cell-check report-dpdf-col-check">Face 2 Quality</div>
+                            <div class="report-dpdf-cell report-dpdf-col-dp" id="rptDpFace2">--</div>
+                            <div class="report-dpdf-cell report-dpdf-col-df" id="rptDfFace2">--</div>
+                        </div>
+                        <div class="report-dpdf-row">
+                            <div class="report-dpdf-cell-check report-dpdf-col-check">Request ID</div>
+                            <div class="report-dpdf-cell report-dpdf-col-dp" id="rptDpReqId">--</div>
+                            <div class="report-dpdf-cell report-dpdf-col-df" id="rptDfReqId">--</div>
+                        </div>
+                        <div class="report-dpdf-row">
+                            <div class="report-dpdf-cell-check report-dpdf-col-check">Processed At</div>
+                            <div class="report-dpdf-cell report-dpdf-col-dp" id="rptDpTime">--</div>
+                            <div class="report-dpdf-cell report-dpdf-col-df" id="rptDfTime">--</div>
+                        </div>
+                    </div>
+
+                    <!-- Disclaimer (Admin Warning Style) -->
+                    <div class="report-disclaimer">
+                        <div class="report-disclaimer-title">Disclaimer</div>
+                        <div class="report-disclaimer-text">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="#4e4e4e" stroke-width="2">
+                                <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                            </svg>
+                            <span>This is an automated face match result. Results should be reviewed by authorized personnel before decisions.</span>
+                        </div>
+                    </div>
+
+                    <!-- Declaration -->
+                    <div class="report-declaration">
+                        <p>This report is generated by SpringVerify using SpringScan face matching technology. The document images and selfie were provided by the candidate and matched using automated biometric algorithms. This report is confidential and intended solely for the authorized recipient.</p>
+                    </div>
+
+                    <!-- Footer: Warning Banner -->
+                    <div class="report-footer-banner">
+                        <span class="report-footer-banner-left">Powered by SpringVerify</span>
+                        <span class="report-footer-banner-right" id="rptFooterDate">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="#4e4e4e" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"/>
+                                <path d="M12 6v6l4 2"/>
+                            </svg>
+                            <span id="rptFooterDateText">--</span>
+                        </span>
+                    </div>
+
+                    <!-- Footer: Pagination -->
+                    <div class="report-footer-pagination">
+                        <div class="report-footer-page-info">
+                            <span class="report-footer-page-number">1</span>
+                            <span class="report-footer-page-name">Face Match Verification</span>
+                        </div>
+                        <span class="report-footer-sv-text">SpringVerify</span>
+                    </div>
+
+                </div>
+            </div>
+        </main>
+
+        <!-- PDF Generating Overlay -->
+        <div class="pdf-generating" id="pdfGenerating">
+            <div class="pdf-spinner"></div>
+            <span class="pdf-generating-text">Generating PDF...</span>
+        </div>
+
+        <!-- Loading Overlay -->
+        <div class="loading-overlay" id="loadingOverlay">
+            <div class="loading-animation">
+                <div class="loading-face"></div>
+                <div class="loading-scan-line"></div>
+            </div>
+            <span class="loading-text">Analyzing Faces...</span>
+            <span class="loading-subtext">Comparing facial features</span>
+        </div>
+
+        <!-- Hidden canvas for photo capture -->
+        <canvas id="captureCanvas" style="display: none;"></canvas>
+    </div>
+
+    <script>
+        // ===========================================
+        // State Management
+        // ===========================================
+        let state = {
+            idImage: null,
+            selfieImage: null,
+            videoStream: null,
+            lastResult: null
+        };
+
+        // ===========================================
+        // DOM Elements
+        // ===========================================
+        const elements = {
+            uploadSection: document.getElementById('uploadSection'),
+            cameraSection: document.getElementById('cameraSection'),
+            resultsSection: document.getElementById('resultsSection'),
+            videoElement: document.getElementById('videoElement'),
+            verifyBtn: document.getElementById('verifyBtn'),
+            loadingOverlay: document.getElementById('loadingOverlay'),
+            errorMessage: document.getElementById('errorMessage'),
+            errorText: document.getElementById('errorText')
+        };
+
+        // ===========================================
+        // Initialize
+        // ===========================================
+        async function init() {
+            // App initialized — using SpringScan API
+            console.log('SpringVerify Face Match initialized');
+        }
+
+        // ===========================================
+        // Error Handling
+        // ===========================================
+        function showError(message) {
+            elements.errorText.textContent = message;
+            elements.errorMessage.classList.remove('hidden');
+            setTimeout(() => {
+                elements.errorMessage.classList.add('hidden');
+            }, 5000);
+        }
+
+        function hideError() {
+            elements.errorMessage.classList.add('hidden');
+        }
+
+        // ===========================================
+        // Image Upload Handling
+        // ===========================================
+        function handleIdUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            // Validate file
+            if (!file.type.startsWith('image/')) {
+                showError('Please upload a valid image file');
+                return;
+            }
+
+            if (file.size > 10 * 1024 * 1024) {
+                showError('Image size should be less than 10MB');
+                return;
+            }
+
+            hideError();
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                state.idImage = e.target.result;
+                document.getElementById('idPlaceholder').classList.add('hidden');
+                document.getElementById('idPreview').classList.remove('hidden');
+                document.getElementById('idPreviewImg').src = state.idImage;
+                document.getElementById('idUploadCard').classList.add('has-image');
+                updateProgress();
+                checkReadyState();
+            };
+            reader.onerror = () => showError('Failed to read image file');
+            reader.readAsDataURL(file);
+        }
+
+        function removeImage(type) {
+            if (type === 'id') {
+                state.idImage = null;
+                document.getElementById('idPlaceholder').classList.remove('hidden');
+                document.getElementById('idPreview').classList.add('hidden');
+                document.getElementById('idUploadCard').classList.remove('has-image');
+                document.getElementById('idInput').value = '';
+            } else {
+                state.selfieImage = null;
+                document.getElementById('selfiePlaceholder').classList.remove('hidden');
+                document.getElementById('selfiePreview').classList.add('hidden');
+                document.getElementById('selfieCard').classList.remove('has-image');
+            }
+            updateProgress();
+            checkReadyState();
+        }
+
+        // ===========================================
+        // Camera Handling
+        // ===========================================
+        async function startCamera() {
+            if (state.selfieImage) return;
+            
+            try {
+                state.videoStream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { 
+                        facingMode: 'user',
+                        width: { ideal: 720 },
+                        height: { ideal: 960 }
+                    } 
+                });
+                elements.videoElement.srcObject = state.videoStream;
+                elements.uploadSection.classList.add('hidden');
+                elements.cameraSection.classList.add('active');
+            } catch (err) {
+                showError('Camera access denied. Please enable camera permissions.');
+                console.error('Camera error:', err);
+            }
+        }
+
+        function stopCamera() {
+            if (state.videoStream) {
+                state.videoStream.getTracks().forEach(track => track.stop());
+                state.videoStream = null;
+            }
+            elements.cameraSection.classList.remove('active');
+            elements.uploadSection.classList.remove('hidden');
+        }
+
+        function capturePhoto() {
+            const canvas = document.getElementById('captureCanvas');
+            const context = canvas.getContext('2d');
+            const video = elements.videoElement;
+            
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            
+            // Mirror the image
+            context.translate(canvas.width, 0);
+            context.scale(-1, 1);
+            context.drawImage(video, 0, 0);
+            
+            state.selfieImage = canvas.toDataURL('image/jpeg', 0.9);
+            
+            document.getElementById('selfiePlaceholder').classList.add('hidden');
+            document.getElementById('selfiePreview').classList.remove('hidden');
+            document.getElementById('selfiePreviewImg').src = state.selfieImage;
+            document.getElementById('selfieCard').classList.add('has-image');
+            
+            stopCamera();
+            updateProgress();
+            checkReadyState();
+        }
+
+        // ===========================================
+        // Progress & State
+        // ===========================================
+        function updateProgress() {
+            const step1 = document.getElementById('step1');
+            const step2 = document.getElementById('step2');
+            const step3 = document.getElementById('step3');
+            const line1 = document.getElementById('line1');
+            const line2 = document.getElementById('line2');
+
+            // Reset all
+            [step1, step2, step3].forEach(s => {
+                s.classList.remove('active', 'completed', 'pending');
+            });
+            [line1, line2].forEach(l => l.classList.remove('completed'));
+
+            if (state.idImage && state.selfieImage) {
+                step1.classList.add('completed');
+                step1.innerHTML = '✓';
+                line1.classList.add('completed');
+                step2.classList.add('completed');
+                step2.innerHTML = '✓';
+                line2.classList.add('completed');
+                step3.classList.add('active');
+            } else if (state.idImage) {
+                step1.classList.add('completed');
+                step1.innerHTML = '✓';
+                line1.classList.add('completed');
+                step2.classList.add('active');
+                step3.classList.add('pending');
+            } else {
+                step1.classList.add('active');
+                step2.classList.add('pending');
+                step3.classList.add('pending');
+            }
+        }
+
+        function checkReadyState() {
+            elements.verifyBtn.disabled = !(state.idImage && state.selfieImage);
+        }
+
+        // ===========================================
+        // Face Match API
+        // ===========================================
+        async function verifyFaces() {
+            hideError();
+            elements.loadingOverlay.classList.add('active');
+            
+            try {
+                const response = await fetch('/api/face-match', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        idImage: state.idImage,
+                        selfieImage: state.selfieImage
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(result.error || 'Verification failed');
+                }
+
+                state.lastResult = result;
+                showResults(result);
+
+            } catch (error) {
+                console.error('Verification error:', error);
+                showError(error.message || 'Verification failed. Please try again.');
+            } finally {
+                elements.loadingOverlay.classList.remove('active');
+            }
+        }
+
+        // ===========================================
+        // Results Display
+        // ===========================================
+        function showResults(result) {
+            elements.uploadSection.classList.add('hidden');
+            elements.resultsSection.classList.add('active');
+
+            const data = result.data;
+            const score = data.match_percentage || data.match_score || 0;
+
+            const badge = document.getElementById('resultBadge');
+            const icon = document.getElementById('resultIcon');
+            const title = document.getElementById('resultTitle');
+            const subtitle = document.getElementById('resultSubtitle');
+            const progress = document.getElementById('scoreProgress');
+            const scoreNum = document.getElementById('scoreNumber');
+            const status = document.getElementById('detailStatus');
+            const confidence = document.getElementById('detailConfidence');
+            const liveness = document.getElementById('detailLiveness');
+            const requestId = document.getElementById('detailRequestId');
+            const time = document.getElementById('detailTime');
+
+            // Set comparison images
+            document.getElementById('resultIdImg').src = state.idImage;
+            document.getElementById('resultSelfieImg').src = state.selfieImage;
+            
+            // Set details
+            requestId.textContent = data.request_id ? data.request_id.substring(0, 20) + '...' : '--';
+            time.textContent = new Date(data.processed_at).toLocaleString();
+            liveness.textContent = data.liveness?.status || 'Passed';
+
+            // Determine result type
+            let resultClass, iconPath, titleText, subtitleText, statusText, confidenceText, confidenceClass;
+            
+            if (score >= 85 || data.status === 'VERIFIED') {
+                resultClass = 'success';
+                iconPath = '<path d="M20 6L9 17l-5-5"/>';
+                titleText = 'Face Match Verified';
+                subtitleText = 'Identity verification successful';
+                statusText = 'Verified';
+                confidenceText = 'High';
+                confidenceClass = 'success';
+            } else if (score >= 70 || data.status === 'REVIEW') {
+                resultClass = 'partial';
+                iconPath = '<path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>';
+                titleText = 'Manual Review Needed';
+                subtitleText = 'Additional verification recommended';
+                statusText = 'Review';
+                confidenceText = 'Medium';
+                confidenceClass = 'warning';
+            } else {
+                resultClass = 'fail';
+                iconPath = '<path d="M18 6L6 18M6 6l12 12"/>';
+                titleText = 'Face Match Failed';
+                subtitleText = 'Unable to verify identity match';
+                statusText = 'Failed';
+                confidenceText = 'Low';
+                confidenceClass = 'error';
+            }
+
+            // Apply styles
+            badge.className = 'result-badge ' + resultClass;
+            icon.innerHTML = iconPath;
+            title.className = 'result-title ' + resultClass;
+            title.textContent = titleText;
+            subtitle.textContent = subtitleText;
+            progress.className = 'score-ring-progress ' + resultClass;
+            status.textContent = statusText;
+            status.className = 'detail-value ' + confidenceClass;
+            confidence.textContent = confidenceText;
+            confidence.className = 'detail-value ' + confidenceClass;
+            liveness.className = 'detail-value success';
+
+            // Animate score
+            const circumference = 2 * Math.PI * 68; // 427
+            const offset = circumference - (score / 100) * circumference;
+
+            setTimeout(() => {
+                progress.style.strokeDashoffset = offset;
+                animateScore(0, Math.round(score), 1200);
+            }, 200);
+
+            // === Populate PDF Report Template ===
+            populateReport(data, score, resultClass, statusText, confidenceText);
+        }
+
+        function animateScore(start, end, duration) {
+            const scoreNum = document.getElementById('scoreNumber');
+            const startTime = performance.now();
+            
+            function update(currentTime) {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const current = Math.floor(start + (end - start) * easeOutCubic(progress));
+                scoreNum.textContent = current + '%';
+                
+                if (progress < 1) {
+                    requestAnimationFrame(update);
+                }
+            }
+            
+            requestAnimationFrame(update);
+        }
+
+        function easeOutCubic(t) {
+            return 1 - Math.pow(1 - t, 3);
+        }
+
+        // ===========================================
+        // Populate PDF Report Template
+        // ===========================================
+        function populateReport(data, score, resultClass, statusText, confidenceText) {
+            const dateStr = new Date(data.processed_at).toLocaleString('en-IN', {
+                day: '2-digit', month: 'short', year: 'numeric',
+                hour: '2-digit', minute: '2-digit', hour12: true
+            });
+
+            const reqId = data.request_id || '--';
+            const matchBand = data.match_band || '--';
+            const livenessStatus = data.liveness?.status || 'PASSED';
+            const face1Quality = data.face_1?.quality || 'GOOD';
+            const face2Quality = data.face_2?.quality || 'GOOD';
+
+            // --- Check Badge ---
+            const checkBadge = document.getElementById('rptCheckBadge');
+            checkBadge.textContent = statusText;
+            checkBadge.className = 'report-check-badge ' + resultClass;
+
+            // --- Status Bar ---
+            const statusBar = document.getElementById('rptStatusBar');
+            statusBar.className = 'report-status-bar-inner ' + resultClass;
+            document.getElementById('rptStatusBarText').textContent = statusText.toUpperCase();
+
+            // --- Images ---
+            document.getElementById('rptIdImg').src = state.idImage;
+            document.getElementById('rptSelfieImg').src = state.selfieImage;
+
+            // --- Score Ring (r=50, circumference=314.16) ---
+            const rptCircumference = 2 * Math.PI * 50;
+            const rptOffset = rptCircumference - (score / 100) * rptCircumference;
+            const rptRing = document.getElementById('rptScoreRing');
+            rptRing.className = 'ring-progress ' + resultClass;
+            rptRing.style.strokeDashoffset = rptOffset;
+            document.getElementById('rptScoreNumber').textContent = Math.round(score) + '%';
+
+            // --- Green/Red tick SVG for DPDF cells ---
+            const tickSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>';
+            const crossSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>';
+            const warnSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.5"><path d="M12 9v4m0 4h.01"/></svg>';
+            const statusSvg = resultClass === 'success' ? tickSvg : resultClass === 'partial' ? warnSvg : crossSvg;
+
+            // --- DPDF Table: Data Provided (DP) = expected/threshold, Data Found (DF) = actual result ---
+            // Match Score
+            document.getElementById('rptDpScore').innerHTML = 'Threshold: 85%';
+            document.getElementById('rptDfScore').innerHTML = statusSvg + ' ' + score.toFixed(2) + '%';
+
+            // Match Band
+            document.getElementById('rptDpBand').innerHTML = 'Expected: HIGH';
+            document.getElementById('rptDfBand').innerHTML = statusSvg + ' ' + matchBand;
+
+            // Confidence
+            document.getElementById('rptDpConfidence').innerHTML = 'Expected: HIGH';
+            document.getElementById('rptDfConfidence').innerHTML = statusSvg + ' ' + confidenceText;
+
+            // Verification Status
+            document.getElementById('rptDpStatus').innerHTML = 'Expected: VERIFIED';
+            document.getElementById('rptDfStatus').innerHTML = statusSvg + ' ' + statusText;
+
+            // Liveness
+            document.getElementById('rptDpLiveness').innerHTML = 'Expected: PASSED';
+            document.getElementById('rptDfLiveness').innerHTML = tickSvg + ' ' + livenessStatus;
+
+            // Face 1 Quality
+            document.getElementById('rptDpFace1').innerHTML = 'Expected: GOOD';
+            document.getElementById('rptDfFace1').innerHTML = tickSvg + ' ' + face1Quality;
+
+            // Face 2 Quality
+            document.getElementById('rptDpFace2').innerHTML = 'Expected: GOOD';
+            document.getElementById('rptDfFace2').innerHTML = tickSvg + ' ' + face2Quality;
+
+            // Request ID
+            document.getElementById('rptDpReqId').innerHTML = '--';
+            document.getElementById('rptDfReqId').innerHTML = reqId;
+
+            // Processed At
+            document.getElementById('rptDpTime').innerHTML = '--';
+            document.getElementById('rptDfTime').innerHTML = dateStr;
+
+            // --- Footer ---
+            document.getElementById('rptFooterDateText').textContent = 'Generated on ' + dateStr;
+
+            // Show report
+            document.getElementById('reportWrapper').classList.add('active');
+        }
+
+        // ===========================================
+        // Reset & Download
+        // ===========================================
+        function resetApp() {
+            state.idImage = null;
+            state.selfieImage = null;
+            state.lastResult = null;
+
+            // Reset UI
+            document.getElementById('idPlaceholder').classList.remove('hidden');
+            document.getElementById('idPreview').classList.add('hidden');
+            document.getElementById('idUploadCard').classList.remove('has-image');
+            document.getElementById('idInput').value = '';
+
+            document.getElementById('selfiePlaceholder').classList.remove('hidden');
+            document.getElementById('selfiePreview').classList.add('hidden');
+            document.getElementById('selfieCard').classList.remove('has-image');
+
+            document.getElementById('scoreProgress').style.strokeDashoffset = 427;
+            document.getElementById('scoreNumber').textContent = '0%';
+
+            // Reset steps
+            ['step1', 'step2', 'step3'].forEach((id, i) => {
+                const el = document.getElementById(id);
+                el.classList.remove('active', 'completed');
+                el.classList.add(i === 0 ? 'active' : 'pending');
+                el.innerHTML = (i + 1).toString();
+            });
+            ['line1', 'line2'].forEach(id => {
+                document.getElementById(id).classList.remove('completed');
+            });
+
+            elements.resultsSection.classList.remove('active');
+            elements.uploadSection.classList.remove('hidden');
+
+            // Hide report
+            document.getElementById('reportWrapper').classList.remove('active');
+
+            checkReadyState();
+            hideError();
+        }
+
+        // ===========================================
+        // PDF Download via html2canvas + jsPDF
+        // ===========================================
+        async function downloadReport() {
+            if (!state.lastResult) return;
+
+            const pdfOverlay = document.getElementById('pdfGenerating');
+            pdfOverlay.classList.add('active');
+
+            try {
+                const reportEl = document.getElementById('reportContent');
+
+                // Temporarily ensure report is visible for capture
+                const wrapper = document.getElementById('reportWrapper');
+                const wasHidden = !wrapper.classList.contains('active');
+                if (wasHidden) wrapper.classList.add('active');
+
+                const canvas = await html2canvas(reportEl, {
+                    scale: 2,
+                    useCORS: true,
+                    allowTaint: true,
+                    backgroundColor: '#ffffff',
+                    width: reportEl.scrollWidth,
+                    height: reportEl.scrollHeight,
+                    scrollX: 0,
+                    scrollY: 0
+                });
+
+                if (wasHidden) wrapper.classList.remove('active');
+
+                const imgData = canvas.toDataURL('image/png');
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF('p', 'mm', 'a4');
+
+                const pageWidth = pdf.internal.pageSize.getWidth();
+                const pageHeight = pdf.internal.pageSize.getHeight();
+                const margin = 10;
+                const usableWidth = pageWidth - (margin * 2);
+                const imgHeight = (canvas.height * usableWidth) / canvas.width;
+
+                // Multi-page handling
+                if (imgHeight <= pageHeight - (margin * 2)) {
+                    // Fits on one page
+                    pdf.addImage(imgData, 'PNG', margin, margin, usableWidth, imgHeight);
+                } else {
+                    // Split across pages
+                    let srcY = 0;
+                    const srcWidth = canvas.width;
+                    const srcPageHeight = Math.floor((pageHeight - margin * 2) / usableWidth * srcWidth);
+                    let pageNum = 0;
+
+                    while (srcY < canvas.height) {
+                        if (pageNum > 0) pdf.addPage();
+
+                        const sliceHeight = Math.min(srcPageHeight, canvas.height - srcY);
+                        const sliceCanvas = document.createElement('canvas');
+                        sliceCanvas.width = srcWidth;
+                        sliceCanvas.height = sliceHeight;
+                        const ctx = sliceCanvas.getContext('2d');
+                        ctx.drawImage(canvas, 0, srcY, srcWidth, sliceHeight, 0, 0, srcWidth, sliceHeight);
+
+                        const sliceImg = sliceCanvas.toDataURL('image/png');
+                        const destHeight = (sliceHeight * usableWidth) / srcWidth;
+                        pdf.addImage(sliceImg, 'PNG', margin, margin, usableWidth, destHeight);
+
+                        srcY += srcPageHeight;
+                        pageNum++;
+                    }
+                }
+
+                const reqId = state.lastResult.data.request_id || Date.now();
+                pdf.save('face-match-report-' + reqId + '.pdf');
+
+            } catch (error) {
+                console.error('PDF generation error:', error);
+                showError('Failed to generate PDF. Please try again.');
+            } finally {
+                pdfOverlay.classList.remove('active');
+            }
+        }
+
+        // Initialize on load
+        init();
+    </script>
+</body>
+</html>
