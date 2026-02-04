@@ -93,7 +93,11 @@ async function callSpringScanAPI(idImageBase64, selfieBase64) {
     throw new Error('SpringScan token not configured. Add SVD_TOKEN_KEY to Secrets.');
   }
 
+  // Generate a unique person_id for this verification
+  const personId = `PERSON_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
   const response = await axios.post(SPRINGSCAN_API_URL, {
+    person_id: personId,
     document1: idImageBase64,
     document2: selfieBase64
   }, {
