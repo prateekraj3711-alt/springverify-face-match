@@ -107,12 +107,17 @@ async function createSpringScanPerson() {
 
 /**
  * SpringScan Face Match API
- * Endpoint: https://api.springscan.springverify.com/v4/faceMatch
+ * Correct 3-step flow:
+ * 1. Create person via /user/person
+ * 2. Upload ID document via /v4/ocr (registers it against the person)
+ * 3. Call /v4/faceMatch to compare stored document against selfie
  */
 async function callSpringScanFaceMatch(idImageBase64, selfieBase64) {
   if (!SPRINGSCAN_TOKEN_KEY) {
     throw new Error('SpringScan token not configured. Add SVD_TOKEN_KEY to .env or Replit Secrets.');
   }
+
+  const docType = 'ind_aadhaar';  // Document type - can be ind_aadhaar, ind_pan, ind_driving_license, etc.
 
   console.log('Step 1: Creating person in SpringScan');
 
@@ -120,16 +125,37 @@ async function callSpringScanFaceMatch(idImageBase64, selfieBase64) {
   const personId = await createSpringScanPerson();
   console.log('Created person with ID:', personId);
 
-  console.log('Step 2: Calling SpringScan Face Match API');
+  console.log('Step 2: Uploading ID document via OCR');
   console.log('Image sizes - ID:', idImageBase64.length, 'Selfie:', selfieBase64.length);
 
   try {
-    // Step 2: Call face match with the valid personId
+    // Step 2: Upload ID document via OCR (registers it against the person)
+    const ocrResponse = await axios.post('https://api.springscan.springverify.com/v4/ocr', {
+      personId: personId,
+      docType: docType,
+      document_front: idImageBase64,
+      document_back: null,
+      success_parameters: ['id_number']
+    }, {
+      headers: {
+        'Content-Type': 'application/json',
+        'tokenKey': SPRINGSCAN_TOKEN_KEY
+      },
+      maxContentLength: Infinity,
+      maxBodyLength: Infinity,
+      timeout: 60000
+    });
+
+    console.log('OCR response:', JSON.stringify(ocrResponse.data).substring(0, 300));
+
+    console.log('Step 3: Calling Face Match API');
+
+    // Step 3: Call face match (compares stored document against selfie)
+    // Note: document1 is NOT needed - SpringScan looks it up using personId + docType
     const response = await axios.post(SPRINGSCAN_API_URL, {
-      personId: personId,  // Valid person ID from Step 1
-      docType: 'ind_aadhaar',  // Document type - can be ind_aadhaar, ind_pan, ind_driving_license, etc.
-      document1: idImageBase64,
-      document2: selfieBase64
+      personId: personId,
+      docType: docType,
+      document2: selfieBase64  // Selfie to compare against stored document
     }, {
       headers: {
         'Content-Type': 'application/json',
