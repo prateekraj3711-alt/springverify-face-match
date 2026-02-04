@@ -127,6 +127,7 @@ async function callSpringScanFaceMatch(idImageBase64, selfieBase64) {
     // Step 2: Call face match with the valid personId
     const response = await axios.post(SPRINGSCAN_API_URL, {
       personId: personId,  // Valid person ID from Step 1
+      docType: 'ind_aadhaar',  // Document type - can be ind_aadhaar, ind_pan, ind_driving_license, etc.
       document1: idImageBase64,
       document2: selfieBase64
     }, {
