@@ -95,8 +95,13 @@ async function callSpringScanFaceMatch(idImageBase64, selfieBase64) {
   console.log('Calling SpringScan Face Match API');
   console.log('Image sizes - ID:', idImageBase64.length, 'Selfie:', selfieBase64.length);
 
+  // Generate a unique person_id for this face match request
+  const personId = `FACEMATCH_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  console.log('Generated person_id:', personId);
+
   try {
     const response = await axios.post(SPRINGSCAN_API_URL, {
+      person_id: personId,
       document1: idImageBase64,
       document2: selfieBase64
     }, {
