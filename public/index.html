@@ -228,6 +228,54 @@
             line-height: 1.6;
         }
 
+        /* Document Type Selector */
+        .doc-type-selector {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .doc-type-selector label {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: block;
+        }
+
+        .doc-type-selector select {
+            width: 100%;
+            padding: 12px 16px;
+            font-size: 15px;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            color: var(--text-primary);
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 16px center;
+            padding-right: 40px;
+        }
+
+        .doc-type-selector select:hover {
+            border-color: var(--primary-light);
+            background-color: var(--bg-card);
+        }
+
+        .doc-type-selector select:focus {
+            outline: none;
+            border-color: var(--primary);
+            background-color: var(--bg-card);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
         /* Upload Cards */
         .upload-card {
             background: var(--bg-card);
@@ -940,9 +988,11 @@
             display: flex;
             width: 100%;
             flex-direction: column;
-            gap: 6px;
+            gap: 0;
             position: absolute;
             bottom: 0;
+            left: 0;
+            right: 0;
         }
 
         /* --- Divider (admin Mantine-style) --- */
@@ -1274,71 +1324,77 @@
 
         /* --- Disclaimer (Admin Warning Footer Style) --- */
         .report-disclaimer {
-            padding: 8px 20px;
+            padding: 10px 20px;
             background-color: #f1fafd;
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 38px;
+            justify-content: flex-start;
+            align-items: flex-start;
+            gap: 12px;
+            page-break-inside: avoid;
         }
 
         .report-disclaimer-title {
-            min-width: 135px;
+            min-width: 80px;
             font-family: 'Montserrat', sans-serif;
-            font-size: 8px;
-            font-weight: 500;
+            font-size: 9px;
+            font-weight: 600;
             color: #4e4e4e;
-            line-height: 12px;
+            line-height: 14px;
+            flex-shrink: 0;
         }
 
         .report-disclaimer-text {
             display: flex;
-            gap: 6px;
-            align-items: center;
+            gap: 8px;
+            align-items: flex-start;
             font-family: 'Montserrat', sans-serif;
             font-size: 8px;
             font-weight: 400;
             color: #4e4e4e;
-            line-height: 12px;
+            line-height: 13px;
+            flex: 1;
         }
 
         .report-disclaimer-text svg {
-            width: 16px;
-            height: 16px;
+            width: 14px;
+            height: 14px;
             flex-shrink: 0;
+            margin-top: 1px;
         }
 
         /* --- Footer Banner (Admin Style) --- */
         .report-footer-banner {
             background-color: #f1fafd;
-            padding: 8px 20px;
+            padding: 10px 20px;
             display: flex;
             align-items: center;
             justify-content: space-between;
+            page-break-inside: avoid;
+            margin-top: 2px;
         }
 
         .report-footer-banner-left {
             font-family: 'Montserrat', sans-serif;
-            font-size: 8px;
-            font-weight: 500;
+            font-size: 9px;
+            font-weight: 600;
             color: #4e4e4e;
-            line-height: 12px;
+            line-height: 14px;
         }
 
         .report-footer-banner-right {
             display: flex;
             align-items: center;
-            gap: 4px;
+            gap: 6px;
             font-family: 'Montserrat', sans-serif;
             font-size: 8px;
             font-weight: 400;
             color: #4e4e4e;
-            line-height: 12px;
+            line-height: 13px;
         }
 
         .report-footer-banner-right svg {
-            width: 16px;
-            height: 16px;
+            width: 14px;
+            height: 14px;
         }
 
         /* --- Pagination Footer (Admin Style) --- */
@@ -1509,6 +1565,18 @@
                         <path d="M12 16v-4M12 8h.01"/>
                     </svg>
                     <span class="info-banner-text">Upload a government-issued ID (Aadhaar, PAN, Passport, Voter ID) and take a live selfie to verify identity.</span>
+                </div>
+
+                <!-- Document Type Selector -->
+                <div class="doc-type-selector">
+                    <label for="docTypeSelect">Select Document Type:</label>
+                    <select id="docTypeSelect" onchange="handleDocTypeChange()">
+                        <option value="ind_aadhaar">Aadhaar Card</option>
+                        <option value="ind_pan">PAN Card</option>
+                        <option value="ind_driving_license">Driving License</option>
+                        <option value="ind_passport">Passport</option>
+                        <option value="ind_voter_id">Voter ID</option>
+                    </select>
                 </div>
 
                 <!-- ID Upload Card -->
@@ -1896,7 +1964,8 @@
             idImage: null,
             selfieImage: null,
             videoStream: null,
-            lastResult: null
+            lastResult: null,
+            docType: 'ind_aadhaar'  // Default document type
         };
 
         // ===========================================
@@ -1956,6 +2025,15 @@
 
         function hideError() {
             elements.errorMessage.classList.add('hidden');
+        }
+
+        // ===========================================
+        // Document Type Handling
+        // ===========================================
+        function handleDocTypeChange() {
+            const select = document.getElementById('docTypeSelect');
+            state.docType = select.value;
+            console.log('Document type changed to:', state.docType);
         }
 
         // ===========================================
@@ -2132,7 +2210,8 @@
                     },
                     body: JSON.stringify({
                         idImage: compressedIdImage,
-                        selfieImage: compressedSelfieImage
+                        selfieImage: compressedSelfieImage,
+                        docType: state.docType  // Send selected document type
                     })
                 });
 

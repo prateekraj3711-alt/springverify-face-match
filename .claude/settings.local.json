@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm start)",
+      "Bash(timeout:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nFix 413 error: optimize image compression to reduce payload size\n\n- Reduce max image width from 1024px to 800px\n- Lower JPEG quality from 0.8 to 0.7 for initial compression\n- Add extra compression layer \\(quality 0.65\\) before API submission\n- Apply compression to both uploaded and captured selfie images\n- Prevents \"request entity too large\" errors from SpringScan API\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git push:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nAdd required person_id field to SpringScan API request\n\n- Generate unique person_id for each verification request\n- Fixes 400 error: \"Person Id is Missing\"\n- Format: PERSON_{timestamp}_{random_string}\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "WebFetch(domain:docs.springverify.com)",
+      "Bash(cd:*)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:documenter.getpostman.com)",
+      "Bash(git commit:*)",
+      "Bash(xargs:*)",
+      "Bash(npm install:*)",
+      "Bash(base64,iVBORw0KGgoAAAANSUh...\" \\(data URI\\)\n\nApplied to both:\n- OCR endpoint \\(document_front\\)\n- Face Match endpoint \\(document1 and document2\\)\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n\\)\")"
+    ]
+  }
+}

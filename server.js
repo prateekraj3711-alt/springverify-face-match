@@ -76,14 +76,16 @@ app.post('/api/face-match', upload.fields([
 ]), async (req, res) => {
   try {
     // Get images
-    let idImageBase64, selfieBase64;
+    let idImageBase64, selfieBase64, docType;
 
     if (req.files?.idImage && req.files?.selfieImage) {
       idImageBase64 = req.files.idImage[0].buffer.toString('base64');
       selfieBase64 = req.files.selfieImage[0].buffer.toString('base64');
+      docType = req.body.docType || 'ind_aadhaar';
     } else if (req.body.idImage && req.body.selfieImage) {
       idImageBase64 = req.body.idImage.replace(/^data:image\/\w+;base64,/, '');
       selfieBase64 = req.body.selfieImage.replace(/^data:image\/\w+;base64,/, '');
+      docType = req.body.docType || 'ind_aadhaar';
     } else {
       return res.status(400).json({
         success: false,
@@ -92,7 +94,7 @@ app.post('/api/face-match', upload.fields([
     }
 
     // Always call SpringScan Face Match
-    const result = await callSpringScanFaceMatch(idImageBase64, selfieBase64);
+    const result = await callSpringScanFaceMatch(idImageBase64, selfieBase64, docType);
     res.json(result);
 
   } catch (error) {
@@ -142,12 +144,12 @@ async function createSpringScanPerson() {
  * faceMatched, matchResult, and matchedInformation fields automatically.
  * No need for separate /v4/faceMatch call!
  */
-async function callSpringScanFaceMatch(idImageBase64, selfieBase64) {
+async function callSpringScanFaceMatch(idImageBase64, selfieBase64, docType = 'ind_aadhaar') {
   if (!SPRINGSCAN_TOKEN_KEY) {
     throw new Error('SpringScan token not configured. Add SVD_TOKEN_KEY to .env or Replit Secrets.');
   }
 
-  const docType = 'ind_aadhaar';  // Document type - can be ind_aadhaar, ind_pan, ind_driving_license, etc.
+  console.log('Using document type:', docType);
 
   // Compress images to stay under SpringScan's payload limit
   console.log('Compressing images...');
