@@ -96,11 +96,19 @@ async function callSpringScanAPI(idImageBase64, selfieBase64) {
   // Generate a unique person_id for this verification
   const personId = `PERSON_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-  const response = await axios.post(SPRINGSCAN_API_URL, {
+  // Try multiple possible field name variations
+  const payload = {
     person_id: personId,
+    personId: personId,  // Try camelCase version too
     document1: idImageBase64,
     document2: selfieBase64
-  }, {
+  };
+
+  console.log('Sending payload with keys:', Object.keys(payload));
+  console.log('Person ID:', personId);
+  console.log('Image sizes - doc1:', idImageBase64.length, 'doc2:', selfieBase64.length);
+
+  const response = await axios.post(SPRINGSCAN_API_URL, payload, {
     headers: {
       'Content-Type': 'application/json',
       'tokenKey': SPRINGSCAN_TOKEN_KEY
