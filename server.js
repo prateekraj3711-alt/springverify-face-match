@@ -10,7 +10,6 @@ const multer = require('multer');
 const cors = require('cors');
 const path = require('path');
 const axios = require('axios');
-const Portkey = require('portkey-ai').default;
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -27,14 +26,9 @@ const upload = multer({
   limits: { fileSize: 20 * 1024 * 1024 }
 });
 
-// API Configuration — Portkey AI Face Match
-const PORTKEY_API_KEY = process.env.PORTKEY_API_KEY || '';
-const PORTKEY_PROMPT_ID = process.env.PORTKEY_PROMPT_ID || 'pp-selfie-id-fa97d5';
-
-// Initialize Portkey client
-const portkey = PORTKEY_API_KEY ? new Portkey({
-  apiKey: PORTKEY_API_KEY
-}) : null;
+// API Configuration — SpringScan Face Match
+const SPRINGSCAN_API_URL = 'https://api.springscan.springverify.com/v4/faceMatch';
+const SPRINGSCAN_TOKEN_KEY = process.env.SVD_TOKEN_KEY || '';
 
 /**
  * Health check
@@ -71,8 +65,8 @@ app.post('/api/face-match', upload.fields([
       });
     }
 
-    // Always call Portkey AI Face Match
-    const result = await callPortkeyFaceMatch(idImageBase64, selfieBase64);
+    // Always call SpringScan Face Match
+    const result = await callSpringScanFaceMatch(idImageBase64, selfieBase64);
     res.json(result);
 
   } catch (error) {
@@ -90,130 +84,65 @@ app.post('/api/face-match', upload.fields([
 });
 
 /**
- * Portkey AI Face Match
- * Compares selfie with ID document photo using AI
+ * SpringScan Face Match API
+ * Endpoint: https://api.springscan.springverify.com/v4/faceMatch
  */
-async function callPortkeyFaceMatch(idImageBase64, selfieBase64) {
-  if (!PORTKEY_API_KEY || !portkey) {
-    throw new Error('Portkey API key not configured. Add PORTKEY_API_KEY to .env or Replit Secrets.');
+async function callSpringScanFaceMatch(idImageBase64, selfieBase64) {
+  if (!SPRINGSCAN_TOKEN_KEY) {
+    throw new Error('SpringScan token not configured. Add SVD_TOKEN_KEY to .env or Replit Secrets.');
   }
 
-  console.log('Calling Portkey AI for face matching (Chat Completions API)');
+  console.log('Calling SpringScan Face Match API');
   console.log('Image sizes - ID:', idImageBase64.length, 'Selfie:', selfieBase64.length);
 
   try {
-    // Use Chat Completions API for vision tasks (not Prompt Completions)
-    const response = await portkey.chat.completions.create({
-      model: 'gpt-4-vision-preview',  // Vision-capable model
-      messages: [
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'image_url',
-              image_url: {
-                url: `data:image/jpeg;base64,${idImageBase64}`,
-                detail: 'low'  // Faster, cheaper for face comparison
-              }
-            },
-            {
-              type: 'image_url',
-              image_url: {
-                url: `data:image/jpeg;base64,${selfieBase64}`,
-                detail: 'low'
-              }
-            },
-            {
-              type: 'text',
-              text: 'Compare these two face images. Determine if they show the same person. Provide: 1) Match result (Yes/No), 2) Confidence score (0-100). Format: "Match: [Yes/No], Confidence: [score]%"'
-            }
-          ]
-        }
-      ],
-      max_tokens: 300
+    const response = await axios.post(SPRINGSCAN_API_URL, {
+      document1: idImageBase64,
+      document2: selfieBase64
+    }, {
+      headers: {
+        'Content-Type': 'application/json',
+        'tokenKey': SPRINGSCAN_TOKEN_KEY
+      },
+      maxContentLength: Infinity,
+      maxBodyLength: Infinity,
+      timeout: 60000
     });
 
-    console.log('Portkey response:', JSON.stringify(response).substring(0, 500));
+    console.log('SpringScan response:', JSON.stringify(response.data).substring(0, 500));
 
-    // Parse AI response
-    const aiText = response.choices?.[0]?.message?.content || '';
+    const data = response.data;
 
-    // Try to extract match result from AI text response
-    const matchResult = parseAIResponse(aiText);
+    // Extract match score from various possible field names
+    const score = data.match_score || data.score || data.confidence || data.similarity ||
+                  data.matchScore || data.confidenceScore || 0;
+
+    const isMatch = data.isMatch || data.match || data.faceMatched || score >= 70;
+    const isHigh = score >= 85;
+    const isMedium = score >= 70;
 
     return {
       success: true,
       data: {
-        request_id: response.id || `PK_${Date.now()}`,
-        match_score: matchResult.score,
-        match_percentage: matchResult.score,
-        match_band: matchResult.score >= 85 ? 'HIGH' : matchResult.score >= 70 ? 'MEDIUM' : 'LOW',
-        status: matchResult.match && matchResult.score >= 70 ? 'VERIFIED' : matchResult.score >= 50 ? 'REVIEW' : 'FAILED',
-        confidence_level: matchResult.score >= 85 ? 'HIGH' : matchResult.score >= 70 ? 'MEDIUM' : 'LOW',
-        face_matched: matchResult.match,
-        liveness: { status: 'N/A', confidence: 0 },
-        face_1: { detected: true, quality: 'GOOD' },
-        face_2: { detected: true, quality: 'GOOD' },
+        request_id: data.request_id || data.transactionId || data.id || `SS_${Date.now()}`,
+        match_score: score,
+        match_percentage: score,
+        match_band: isHigh ? 'HIGH' : isMedium ? 'MEDIUM' : 'LOW',
+        status: isMatch && score >= 70 ? 'VERIFIED' : score >= 50 ? 'REVIEW' : 'FAILED',
+        confidence_level: isHigh ? 'HIGH' : isMedium ? 'MEDIUM' : 'LOW',
+        face_matched: isMatch,
+        liveness: { status: data.liveness?.status || 'N/A', confidence: data.liveness?.confidence || 0 },
+        face_1: { detected: data.face_1?.detected ?? true, quality: data.face_1?.quality || 'GOOD' },
+        face_2: { detected: data.face_2?.detected ?? true, quality: data.face_2?.quality || 'GOOD' },
         processed_at: new Date().toISOString(),
-        mode: 'portkey-ai-vision',
-        ai_response: aiText,
-        raw_response: response
+        mode: 'springscan-facematch',
+        raw_response: data
       }
     };
   } catch (error) {
-    console.error('Portkey API error:', error);
+    console.error('SpringScan API error:', error);
     throw error;
   }
-}
-
-/**
- * Parse AI text response to extract match result
- * Adjust based on actual prompt output format
- */
-function parseAIResponse(aiText) {
-  // Default values
-  let match = false;
-  let score = 0;
-
-  if (!aiText) return { match, score };
-
-  const lowerText = aiText.toLowerCase();
-
-  // Check for match indicators
-  if (lowerText.includes('match') && (lowerText.includes('yes') || lowerText.includes('true') || lowerText.includes('positive'))) {
-    match = true;
-  }
-
-  // Check for no match indicators
-  if (lowerText.includes('no match') || lowerText.includes('not match') || lowerText.includes('different')) {
-    match = false;
-  }
-
-  // Extract percentage (e.g., "95%", "85.5%")
-  const percentMatch = aiText.match(/(\d+\.?\d*)%/);
-  if (percentMatch) {
-    score = parseFloat(percentMatch[1]);
-  }
-
-  // Extract decimal score (e.g., "0.95", "0.855")
-  const decimalMatch = aiText.match(/score[:\s]+(\d+\.?\d*)/i);
-  if (decimalMatch) {
-    const val = parseFloat(decimalMatch[1]);
-    score = val <= 1 ? val * 100 : val;
-  }
-
-  // Extract confidence (e.g., "confidence: 95")
-  const confMatch = aiText.match(/confidence[:\s]+(\d+\.?\d*)/i);
-  if (confMatch) {
-    score = parseFloat(confMatch[1]);
-  }
-
-  // If score is high but no explicit match found, infer match
-  if (score >= 70 && !lowerText.includes('not')) {
-    match = true;
-  }
-
-  return { match, score };
 }
 
 // Serve app
@@ -225,9 +154,8 @@ app.get('/', (req, res) => {
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`\n🔐 SpringVerify Face Match`);
   console.log(`   Running on port ${PORT}`);
-  console.log(`   Face Match API: Portkey AI`);
-  console.log(`   Portkey API Key: ${PORTKEY_API_KEY ? 'Configured ✓' : 'NOT SET - add PORTKEY_API_KEY to .env'}`);
-  console.log(`   Prompt ID: ${PORTKEY_PROMPT_ID}`);
+  console.log(`   Face Match API: SpringScan /v4/faceMatch`);
+  console.log(`   Token: ${SPRINGSCAN_TOKEN_KEY ? 'Configured ✓' : 'NOT SET - add SVD_TOKEN_KEY to .env'}`);
   console.log(`   Report: Client-side PDF generation\n`);
 });
 
