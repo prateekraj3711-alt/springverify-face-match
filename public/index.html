@@ -971,18 +971,19 @@
 
         /* --- Admin PageLayout (850px page) --- */
         .report-page {
-            height: 850px;
+            height: auto;
+            min-height: 850px;
             display: flex;
             flex-direction: column;
             position: relative;
             page-break-inside: avoid;
             border-bottom: 1px solid #c4dcff;
             margin-bottom: 20px;
+            padding-bottom: 130px; /* Reserve space for footer */
         }
 
         .report-page-content {
             flex: 1;
-            padding-bottom: 120px; /* Space for footer */
             min-height: 0;
         }
 
@@ -996,6 +997,8 @@
             left: 0;
             right: 0;
             background: white;
+            z-index: 10;
+            box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.05);
         }
 
         /* --- Divider (admin Mantine-style) --- */
@@ -1168,7 +1171,7 @@
 
         /* --- DPDF Table (Data Provided / Data Found) --- */
         .report-dpdf-card {
-            margin: 14px 24px 0 24px;
+            margin: 14px 24px 30px 24px; /* Added bottom margin for spacing */
             border: #E4E7EC 1px solid;
             border-radius: 0;
         }
