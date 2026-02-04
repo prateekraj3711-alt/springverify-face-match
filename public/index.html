@@ -8,9 +8,11 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <!-- PDF Generation Libraries -->
+    <!-- PDF Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- PDF.js for reading PDFs -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <style>
         :root {
             --primary: #6366f1;
@@ -1554,7 +1556,7 @@
                         <circle cx="12" cy="12" r="10"/>
                         <path d="M12 16v-4M12 8h.01"/>
                     </svg>
-                    <span class="info-banner-text">Upload a government-issued ID (Aadhaar, PAN, Passport, Voter ID) and take a live selfie to verify identity.</span>
+                    <span class="info-banner-text">Upload a government-issued ID as image or PDF (Aadhaar, PAN, Passport, Voter ID) and take a live selfie to verify identity.</span>
                 </div>
 
                 <!-- Document Type Selector -->
@@ -1581,7 +1583,7 @@
                             </svg>
                         </div>
                         <h3>Upload ID Document</h3>
-                        <p>Aadhaar, PAN Card, Passport, or Voter ID</p>
+                        <p>Image or PDF • Aadhaar, PAN, Passport, Voter ID</p>
                     </div>
                     <div id="idPreview" class="preview-container hidden">
                         <img id="idPreviewImg" class="preview-image" src="" alt="ID Preview">
@@ -1592,7 +1594,7 @@
                             </svg>
                         </button>
                     </div>
-                    <input type="file" id="idInput" accept="image/*" onchange="handleIdUpload(event)">
+                    <input type="file" id="idInput" accept="image/*,application/pdf" onchange="handleIdUpload(event)">
                 </div>
 
                 <!-- Selfie Card -->
@@ -2022,38 +2024,93 @@
         }
 
         // ===========================================
-        // Image Upload Handling
+        // Image & PDF Upload Handling
         // ===========================================
         async function handleIdUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
 
-            // Validate file
-            if (!file.type.startsWith('image/')) {
-                showError('Please upload a valid image file');
+            // Validate file type
+            const isImage = file.type.startsWith('image/');
+            const isPDF = file.type === 'application/pdf';
+
+            if (!isImage && !isPDF) {
+                showError('Please upload an image or PDF file');
                 return;
             }
 
             if (file.size > 10 * 1024 * 1024) {
-                showError('Image size should be less than 10MB');
+                showError('File size should be less than 10MB');
                 return;
             }
 
             hideError();
 
-            const reader = new FileReader();
-            reader.onload = async function(e) {
-                // Compress image to avoid 413 errors
-                state.idImage = await compressImage(e.target.result);
-                document.getElementById('idPlaceholder').classList.add('hidden');
-                document.getElementById('idPreview').classList.remove('hidden');
-                document.getElementById('idPreviewImg').src = state.idImage;
-                document.getElementById('idUploadCard').classList.add('has-image');
-                updateProgress();
-                checkReadyState();
-            };
-            reader.onerror = () => showError('Failed to read image file');
-            reader.readAsDataURL(file);
+            try {
+                if (isPDF) {
+                    // Handle PDF file - convert first page to image
+                    await handlePdfUpload(file);
+                } else {
+                    // Handle image file
+                    const reader = new FileReader();
+                    reader.onload = async function(e) {
+                        // Compress image to avoid 413 errors
+                        state.idImage = await compressImage(e.target.result);
+                        document.getElementById('idPlaceholder').classList.add('hidden');
+                        document.getElementById('idPreview').classList.remove('hidden');
+                        document.getElementById('idPreviewImg').src = state.idImage;
+                        document.getElementById('idUploadCard').classList.add('has-image');
+                        updateProgress();
+                        checkReadyState();
+                    };
+                    reader.onerror = () => showError('Failed to read image file');
+                    reader.readAsDataURL(file);
+                }
+            } catch (error) {
+                console.error('File upload error:', error);
+                showError('Failed to process file. Please try again.');
+            }
+        }
+
+        async function handlePdfUpload(file) {
+            // Set PDF.js worker
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+            const arrayBuffer = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+
+            // Get first page
+            const page = await pdf.getPage(1);
+
+            // Set scale for good quality
+            const scale = 2.0;
+            const viewport = page.getViewport({ scale });
+
+            // Create canvas
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+
+            // Render PDF page to canvas
+            await page.render({
+                canvasContext: context,
+                viewport: viewport
+            }).promise;
+
+            // Convert canvas to base64 image
+            const imageDataUrl = canvas.toDataURL('image/jpeg', 0.9);
+
+            // Compress the image
+            state.idImage = await compressImage(imageDataUrl);
+
+            // Update UI
+            document.getElementById('idPlaceholder').classList.add('hidden');
+            document.getElementById('idPreview').classList.remove('hidden');
+            document.getElementById('idPreviewImg').src = state.idImage;
+            document.getElementById('idUploadCard').classList.add('has-image');
+            updateProgress();
+            checkReadyState();
         }
 
         function removeImage(type) {
