@@ -84,6 +84,24 @@ app.post('/api/face-match', upload.fields([
 });
 
 /**
+ * Create a person in SpringScan
+ * Required before calling face match API
+ */
+async function createSpringScanPerson() {
+  const response = await axios.post('https://api.springscan.springverify.com/user/person', {
+    name: `FaceMatch_${Date.now()}`
+  }, {
+    headers: {
+      'Content-Type': 'application/json',
+      'tokenKey': SPRINGSCAN_TOKEN_KEY
+    },
+    timeout: 30000
+  });
+
+  return response.data._id;  // Return the person ID
+}
+
+/**
  * SpringScan Face Match API
  * Endpoint: https://api.springscan.springverify.com/v4/faceMatch
  */
@@ -92,16 +110,19 @@ async function callSpringScanFaceMatch(idImageBase64, selfieBase64) {
     throw new Error('SpringScan token not configured. Add SVD_TOKEN_KEY to .env or Replit Secrets.');
   }
 
-  console.log('Calling SpringScan Face Match API');
+  console.log('Step 1: Creating person in SpringScan');
+
+  // Step 1: Create a person first
+  const personId = await createSpringScanPerson();
+  console.log('Created person with ID:', personId);
+
+  console.log('Step 2: Calling SpringScan Face Match API');
   console.log('Image sizes - ID:', idImageBase64.length, 'Selfie:', selfieBase64.length);
 
-  // Generate a unique person_id for this face match request
-  const personId = `FACEMATCH_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  console.log('Generated person_id:', personId);
-
   try {
+    // Step 2: Call face match with the valid personId
     const response = await axios.post(SPRINGSCAN_API_URL, {
-      personId: personId,  // camelCase, not snake_case!
+      personId: personId,  // Valid person ID from Step 1
       document1: idImageBase64,
       document2: selfieBase64
     }, {
@@ -130,6 +151,7 @@ async function callSpringScanFaceMatch(idImageBase64, selfieBase64) {
       success: true,
       data: {
         request_id: data.request_id || data.transactionId || data.id || `SS_${Date.now()}`,
+        person_id: personId,  // Include the person ID in response
         match_score: score,
         match_percentage: score,
         match_band: isHigh ? 'HIGH' : isMedium ? 'MEDIUM' : 'LOW',
