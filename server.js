@@ -150,12 +150,13 @@ async function callSpringScanFaceMatch(idImageBase64, selfieBase64) {
 
     console.log('Step 3: Calling Face Match API');
 
-    // Step 3: Call face match (compares stored document against selfie)
-    // Note: document1 is NOT needed - SpringScan looks it up using personId + docType
+    // Step 3: Call face match with BOTH documents
+    // Even though OCR registered the document, faceMatch still needs both images
     const response = await axios.post(SPRINGSCAN_API_URL, {
       personId: personId,
       docType: docType,
-      document2: selfieBase64  // Selfie to compare against stored document
+      document1: idImageBase64,  // ID document
+      document2: selfieBase64    // Selfie
     }, {
       headers: {
         'Content-Type': 'application/json',
