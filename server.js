@@ -133,11 +133,14 @@ async function createSpringScanPerson() {
 
 /**
  * SpringScan Face Match API
- * Correct 4-step flow:
+ * Correct 3-step flow - Face matching happens automatically during OCR:
  * 1. Create person via /user/person
- * 2. Upload ID document via /v4/ocr (registers document against person)
- * 3. Upload selfie via /user/person/{personId}/selfie
- * 4. Call /v4/faceMatch with only personId + docType (no images needed)
+ * 2. Upload selfie via /user/person/{personId}/selfie (BEFORE OCR)
+ * 3. Upload ID via /v4/ocr - returns face match results automatically
+ *
+ * Key insight: When selfie is already on the person, OCR response includes
+ * faceMatched, matchResult, and matchedInformation fields automatically.
+ * No need for separate /v4/faceMatch call!
  */
 async function callSpringScanFaceMatch(idImageBase64, selfieBase64) {
   if (!SPRINGSCAN_TOKEN_KEY) {
@@ -162,8 +165,23 @@ async function callSpringScanFaceMatch(idImageBase64, selfieBase64) {
   console.log('Created person with ID:', personId);
 
   try {
-    // Step 2: Upload ID document via OCR (registers it against the person)
-    console.log('Step 2: Uploading ID document via OCR');
+    // Step 2: Upload selfie FIRST (before OCR)
+    console.log('Step 2: Uploading selfie to person');
+    await axios.post(
+      `https://api.springscan.springverify.com/user/person/${personId}/selfie`,
+      { selfieurl: compressedSelfie },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'tokenKey': SPRINGSCAN_TOKEN_KEY
+        },
+        timeout: 60000
+      }
+    );
+    console.log('Selfie uploaded successfully');
+
+    // Step 3: Upload ID via OCR - face matching happens automatically
+    console.log('Step 3: Uploading ID document via OCR (face match will happen automatically)');
     const ocrResponse = await axios.post('https://api.springscan.springverify.com/v4/ocr', {
       personId: personId,
       docType: docType,
@@ -180,45 +198,22 @@ async function callSpringScanFaceMatch(idImageBase64, selfieBase64) {
       timeout: 60000
     });
 
-    console.log('OCR response:', JSON.stringify(ocrResponse.data).substring(0, 300));
+    console.log('OCR Response (includes face match results):');
+    console.log(JSON.stringify(ocrResponse.data, null, 2));
 
-    // Step 3: Upload selfie to the person
-    console.log('Step 3: Uploading selfie to person');
-    await axios.post(
-      `https://api.springscan.springverify.com/user/person/${personId}/selfie`,
-      { selfieurl: compressedSelfie },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          'tokenKey': SPRINGSCAN_TOKEN_KEY
-        },
-        timeout: 60000
-      }
-    );
-    console.log('Selfie uploaded successfully');
+    const data = ocrResponse.data;
 
-    // Step 4: Call face match (only personId + docType - images already on the person)
-    console.log('Step 4: Calling Face Match API');
-    const response = await axios.post(SPRINGSCAN_API_URL, {
-      personId: personId,
-      docType: docType
-    }, {
-      headers: {
-        'Content-Type': 'application/json',
-        'tokenKey': SPRINGSCAN_TOKEN_KEY
-      },
-      timeout: 60000
-    });
-
-    console.log('SpringScan response:', JSON.stringify(response.data).substring(0, 500));
-
-    const data = response.data;
+    // Extract face match results from OCR response
+    // OCR response includes: faceMatched, matchResult, matchedInformation
+    const faceMatched = data.faceMatched || false;
+    const matchResult = data.matchResult || data.matchedInformation || {};
 
     // Extract match score from various possible field names
-    const score = data.match_score || data.score || data.confidence || data.similarity ||
+    const score = matchResult.confidence || matchResult.score ||
+                  data.match_score || data.score || data.confidence ||
                   data.matchScore || data.confidenceScore || 0;
 
-    const isMatch = data.isMatch || data.match || data.faceMatched || score >= 70;
+    const isMatch = faceMatched || data.isMatch || score >= 70;
     const isHigh = score >= 85;
     const isMedium = score >= 70;
 
@@ -226,18 +221,20 @@ async function callSpringScanFaceMatch(idImageBase64, selfieBase64) {
       success: true,
       data: {
         request_id: data.request_id || data.transactionId || data.id || `SS_${Date.now()}`,
-        person_id: personId,  // Include the person ID in response
+        person_id: personId,
         match_score: score,
         match_percentage: score,
         match_band: isHigh ? 'HIGH' : isMedium ? 'MEDIUM' : 'LOW',
         status: isMatch && score >= 70 ? 'VERIFIED' : score >= 50 ? 'REVIEW' : 'FAILED',
         confidence_level: isHigh ? 'HIGH' : isMedium ? 'MEDIUM' : 'LOW',
-        face_matched: isMatch,
+        face_matched: faceMatched,
+        match_result: matchResult,  // Include full match result object
+        ocr_data: data.ocrData || data.extracted_data || {},  // Include OCR extracted data
         liveness: { status: data.liveness?.status || 'N/A', confidence: data.liveness?.confidence || 0 },
         face_1: { detected: data.face_1?.detected ?? true, quality: data.face_1?.quality || 'GOOD' },
         face_2: { detected: data.face_2?.detected ?? true, quality: data.face_2?.quality || 'GOOD' },
         processed_at: new Date().toISOString(),
-        mode: 'springscan-facematch',
+        mode: 'springscan-ocr-with-facematch',
         raw_response: data
       }
     };
