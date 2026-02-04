@@ -88,11 +88,15 @@ app.post('/api/face-match', upload.fields([
  * Required before calling face match API
  */
 async function createSpringScanPerson() {
-  const response = await axios.post('https://api.springscan.springverify.com/user/person', {
-    name: `FaceMatch_${Date.now()}`
-  }, {
+  const timestamp = Date.now();
+  const params = new URLSearchParams({
+    first_name: `FaceMatch`,
+    last_name: `${timestamp}`
+  });
+
+  const response = await axios.post('https://api.springscan.springverify.com/user/person', params, {
     headers: {
-      'Content-Type': 'application/json',
+      'Content-Type': 'application/x-www-form-urlencoded',
       'tokenKey': SPRINGSCAN_TOKEN_KEY
     },
     timeout: 30000
