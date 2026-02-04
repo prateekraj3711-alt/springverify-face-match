@@ -133,10 +133,11 @@ async function createSpringScanPerson() {
 
 /**
  * SpringScan Face Match API
- * Correct 3-step flow:
+ * Correct 4-step flow:
  * 1. Create person via /user/person
- * 2. Upload ID document via /v4/ocr (registers it against the person)
- * 3. Call /v4/faceMatch to compare stored document against selfie
+ * 2. Upload ID document via /v4/ocr (registers document against person)
+ * 3. Upload selfie via /user/person/{personId}/selfie
+ * 4. Call /v4/faceMatch with only personId + docType (no images needed)
  */
 async function callSpringScanFaceMatch(idImageBase64, selfieBase64) {
   if (!SPRINGSCAN_TOKEN_KEY) {
@@ -160,10 +161,9 @@ async function callSpringScanFaceMatch(idImageBase64, selfieBase64) {
   const personId = await createSpringScanPerson();
   console.log('Created person with ID:', personId);
 
-  console.log('Step 2: Uploading ID document via OCR');
-
   try {
     // Step 2: Upload ID document via OCR (registers it against the person)
+    console.log('Step 2: Uploading ID document via OCR');
     const ocrResponse = await axios.post('https://api.springscan.springverify.com/v4/ocr', {
       personId: personId,
       docType: docType,
@@ -182,21 +182,31 @@ async function callSpringScanFaceMatch(idImageBase64, selfieBase64) {
 
     console.log('OCR response:', JSON.stringify(ocrResponse.data).substring(0, 300));
 
-    console.log('Step 3: Calling Face Match API');
+    // Step 3: Upload selfie to the person
+    console.log('Step 3: Uploading selfie to person');
+    await axios.post(
+      `https://api.springscan.springverify.com/user/person/${personId}/selfie`,
+      { selfieurl: compressedSelfie },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'tokenKey': SPRINGSCAN_TOKEN_KEY
+        },
+        timeout: 60000
+      }
+    );
+    console.log('Selfie uploaded successfully');
 
-    // Step 3: Call face match with correct field names
+    // Step 4: Call face match (only personId + docType - images already on the person)
+    console.log('Step 4: Calling Face Match API');
     const response = await axios.post(SPRINGSCAN_API_URL, {
       personId: personId,
-      docType: docType,
-      document: compressedId,
-      selfie: compressedSelfie
+      docType: docType
     }, {
       headers: {
         'Content-Type': 'application/json',
         'tokenKey': SPRINGSCAN_TOKEN_KEY
       },
-      maxContentLength: Infinity,
-      maxBodyLength: Infinity,
       timeout: 60000
     });
 
