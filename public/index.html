@@ -2268,7 +2268,22 @@
 
             } catch (error) {
                 console.error('Verification error:', error);
-                showError(error.message || 'Verification failed. Please try again.');
+                const errorMsg = error.message || 'Verification failed. Please try again.';
+
+                // Highlight document type selector if it's a mismatch error
+                if (errorMsg.includes('Document type mismatch') || errorMsg.includes('correct document type')) {
+                    const docSelect = document.getElementById('docTypeSelect');
+                    docSelect.style.borderColor = '#ef4444';
+                    docSelect.style.boxShadow = '0 0 0 3px rgba(239, 68, 68, 0.1)';
+
+                    // Remove highlight after 5 seconds
+                    setTimeout(() => {
+                        docSelect.style.borderColor = '';
+                        docSelect.style.boxShadow = '';
+                    }, 5000);
+                }
+
+                showError(errorMsg);
             } finally {
                 elements.loadingOverlay.classList.remove('active');
             }

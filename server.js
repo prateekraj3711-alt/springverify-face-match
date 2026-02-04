@@ -111,9 +111,19 @@ app.post('/api/face-match', upload.fields([
     console.error('Face Match Error:', error.message);
     console.error('  Status:', status);
     console.error('  Response:', JSON.stringify(detail)?.substring(0, 500));
+
+    // Check for document type mismatch error
+    let userMessage = error.message || 'Internal server error';
+
+    if (status === 422 || detail?.api_status_description?.includes('DocType is not matching')) {
+      userMessage = 'Document type mismatch. Please select the correct document type that matches your uploaded ID.';
+    } else if (detail?.api_status_description?.includes('DocType')) {
+      userMessage = 'Invalid document type. Please choose the correct document type.';
+    }
+
     res.status(status || 500).json({
       success: false,
-      error: error.message || 'Internal server error',
+      error: userMessage,
       detail: detail
     });
   }
@@ -254,6 +264,16 @@ async function callSpringScanFaceMatch(idImageBase64, selfieBase64, docType) {
     };
   } catch (error) {
     console.error('SpringScan API error:', error);
+
+    // Check for document type mismatch in OCR response
+    const errorMessage = error.response?.data?.api_status_description || error.message;
+
+    if (errorMessage.includes('DocType is not matching') || errorMessage.includes('Entered DocType')) {
+      const friendlyError = new Error('Document type mismatch. The uploaded document does not match the selected type. Please choose the correct document type.');
+      friendlyError.response = error.response;
+      throw friendlyError;
+    }
+
     throw error;
   }
 }
