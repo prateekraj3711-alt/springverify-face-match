@@ -75,21 +75,29 @@ app.post('/api/face-match', upload.fields([
   { name: 'selfieImage', maxCount: 1 }
 ]), async (req, res) => {
   try {
-    // Get images
+    // Get images and document type
     let idImageBase64, selfieBase64, docType;
 
     if (req.files?.idImage && req.files?.selfieImage) {
       idImageBase64 = req.files.idImage[0].buffer.toString('base64');
       selfieBase64 = req.files.selfieImage[0].buffer.toString('base64');
-      docType = req.body.docType || 'ind_aadhaar';
+      docType = req.body.docType;
     } else if (req.body.idImage && req.body.selfieImage) {
       idImageBase64 = req.body.idImage.replace(/^data:image\/\w+;base64,/, '');
       selfieBase64 = req.body.selfieImage.replace(/^data:image\/\w+;base64,/, '');
-      docType = req.body.docType || 'ind_aadhaar';
+      docType = req.body.docType;
     } else {
       return res.status(400).json({
         success: false,
         error: 'Both idImage and selfieImage are required'
+      });
+    }
+
+    // Validate document type is provided
+    if (!docType) {
+      return res.status(400).json({
+        success: false,
+        error: 'Document type is required. Please select a document type.'
       });
     }
 
@@ -144,9 +152,13 @@ async function createSpringScanPerson() {
  * faceMatched, matchResult, and matchedInformation fields automatically.
  * No need for separate /v4/faceMatch call!
  */
-async function callSpringScanFaceMatch(idImageBase64, selfieBase64, docType = 'ind_aadhaar') {
+async function callSpringScanFaceMatch(idImageBase64, selfieBase64, docType) {
   if (!SPRINGSCAN_TOKEN_KEY) {
     throw new Error('SpringScan token not configured. Add SVD_TOKEN_KEY to .env or Replit Secrets.');
+  }
+
+  if (!docType) {
+    throw new Error('Document type is required');
   }
 
   console.log('Using document type:', docType);
