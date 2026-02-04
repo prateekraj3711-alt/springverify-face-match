@@ -128,12 +128,16 @@ async function callSpringScanFaceMatch(idImageBase64, selfieBase64) {
   console.log('Step 2: Uploading ID document via OCR');
   console.log('Image sizes - ID:', idImageBase64.length, 'Selfie:', selfieBase64.length);
 
+  // Convert base64 to data URI format (SpringScan expects URLs or data URIs, not raw base64)
+  const idImageDataUri = `data:image/jpeg;base64,${idImageBase64}`;
+  const selfieDataUri = `data:image/jpeg;base64,${selfieBase64}`;
+
   try {
     // Step 2: Upload ID document via OCR (registers it against the person)
     const ocrResponse = await axios.post('https://api.springscan.springverify.com/v4/ocr', {
       personId: personId,
       docType: docType,
-      document_front: idImageBase64,
+      document_front: idImageDataUri,
       document_back: null,
       success_parameters: ['id_number']
     }, {
@@ -150,13 +154,12 @@ async function callSpringScanFaceMatch(idImageBase64, selfieBase64) {
 
     console.log('Step 3: Calling Face Match API');
 
-    // Step 3: Call face match with BOTH documents
-    // Even though OCR registered the document, faceMatch still needs both images
+    // Step 3: Call face match with BOTH documents (as data URIs)
     const response = await axios.post(SPRINGSCAN_API_URL, {
       personId: personId,
       docType: docType,
-      document1: idImageBase64,  // ID document
-      document2: selfieBase64    // Selfie
+      document1: idImageDataUri,  // ID document with data URI prefix
+      document2: selfieDataUri    // Selfie with data URI prefix
     }, {
       headers: {
         'Content-Type': 'application/json',
