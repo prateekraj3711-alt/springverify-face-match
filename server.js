@@ -98,23 +98,45 @@ async function callPortkeyFaceMatch(idImageBase64, selfieBase64) {
     throw new Error('Portkey API key not configured. Add PORTKEY_API_KEY to .env or Replit Secrets.');
   }
 
-  console.log('Calling Portkey AI for face matching');
+  console.log('Calling Portkey AI for face matching (Chat Completions API)');
   console.log('Image sizes - ID:', idImageBase64.length, 'Selfie:', selfieBase64.length);
 
   try {
-    // Call Portkey with prompt completion
-    const response = await portkey.prompts.completions.create({
-      promptID: PORTKEY_PROMPT_ID,
-      variables: {
-        image_selfie: `data:image/jpeg;base64,${selfieBase64}`,
-        image_id_doc: `data:image/jpeg;base64,${idImageBase64}`
-      }
+    // Use Chat Completions API for vision tasks (not Prompt Completions)
+    const response = await portkey.chat.completions.create({
+      model: 'gpt-4-vision-preview',  // Vision-capable model
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'image_url',
+              image_url: {
+                url: `data:image/jpeg;base64,${idImageBase64}`,
+                detail: 'low'  // Faster, cheaper for face comparison
+              }
+            },
+            {
+              type: 'image_url',
+              image_url: {
+                url: `data:image/jpeg;base64,${selfieBase64}`,
+                detail: 'low'
+              }
+            },
+            {
+              type: 'text',
+              text: 'Compare these two face images. Determine if they show the same person. Provide: 1) Match result (Yes/No), 2) Confidence score (0-100). Format: "Match: [Yes/No], Confidence: [score]%"'
+            }
+          ]
+        }
+      ],
+      max_tokens: 300
     });
 
     console.log('Portkey response:', JSON.stringify(response).substring(0, 500));
 
     // Parse AI response
-    const aiText = response.choices?.[0]?.message?.content || response.text || '';
+    const aiText = response.choices?.[0]?.message?.content || '';
 
     // Try to extract match result from AI text response
     const matchResult = parseAIResponse(aiText);
@@ -133,7 +155,7 @@ async function callPortkeyFaceMatch(idImageBase64, selfieBase64) {
         face_1: { detected: true, quality: 'GOOD' },
         face_2: { detected: true, quality: 'GOOD' },
         processed_at: new Date().toISOString(),
-        mode: 'portkey-ai',
+        mode: 'portkey-ai-vision',
         ai_response: aiText,
         raw_response: response
       }
