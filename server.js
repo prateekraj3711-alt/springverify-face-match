@@ -101,7 +101,7 @@ async function callSpringScanFaceMatch(idImageBase64, selfieBase64) {
 
   try {
     const response = await axios.post(SPRINGSCAN_API_URL, {
-      person_id: personId,
+      personId: personId,  // camelCase, not snake_case!
       document1: idImageBase64,
       document2: selfieBase64
     }, {
