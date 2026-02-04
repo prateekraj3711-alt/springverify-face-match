@@ -10,6 +10,7 @@ const multer = require('multer');
 const cors = require('cors');
 const path = require('path');
 const axios = require('axios');
+const sharp = require('sharp');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -29,6 +30,31 @@ const upload = multer({
 // API Configuration — SpringScan Face Match
 const SPRINGSCAN_API_URL = 'https://api.springscan.springverify.com/v4/faceMatch';
 const SPRINGSCAN_TOKEN_KEY = process.env.SVD_TOKEN_KEY || '';
+
+/**
+ * Compress image to ensure it's under SpringScan's size limit
+ * Target: ~30KB base64 per image (under 100KB total payload)
+ */
+async function compressImage(base64String, maxSizeKB = 30) {
+  const buffer = Buffer.from(base64String, 'base64');
+
+  let quality = 70;
+  let compressed = await sharp(buffer)
+    .resize(800, 800, { fit: 'inside', withoutEnlargement: true })
+    .jpeg({ quality })
+    .toBuffer();
+
+  // If still too large, reduce quality further
+  while (compressed.length > maxSizeKB * 1024 && quality > 20) {
+    quality -= 10;
+    compressed = await sharp(buffer)
+      .resize(600, 600, { fit: 'inside', withoutEnlargement: true })
+      .jpeg({ quality })
+      .toBuffer();
+  }
+
+  return compressed.toString('base64');
+}
 
 /**
  * Health check
@@ -119,6 +145,15 @@ async function callSpringScanFaceMatch(idImageBase64, selfieBase64) {
 
   const docType = 'ind_aadhaar';  // Document type - can be ind_aadhaar, ind_pan, ind_driving_license, etc.
 
+  // Compress images to stay under SpringScan's payload limit
+  console.log('Compressing images...');
+  console.log('Original sizes - ID:', idImageBase64.length, 'Selfie:', selfieBase64.length);
+
+  const compressedId = await compressImage(idImageBase64);
+  const compressedSelfie = await compressImage(selfieBase64);
+
+  console.log('Compressed sizes - ID:', compressedId.length, 'Selfie:', compressedSelfie.length);
+
   console.log('Step 1: Creating person in SpringScan');
 
   // Step 1: Create a person first
@@ -126,14 +161,13 @@ async function callSpringScanFaceMatch(idImageBase64, selfieBase64) {
   console.log('Created person with ID:', personId);
 
   console.log('Step 2: Uploading ID document via OCR');
-  console.log('Image sizes - ID:', idImageBase64.length, 'Selfie:', selfieBase64.length);
 
   try {
     // Step 2: Upload ID document via OCR (registers it against the person)
     const ocrResponse = await axios.post('https://api.springscan.springverify.com/v4/ocr', {
       personId: personId,
       docType: docType,
-      document_front: idImageBase64,  // Raw base64
+      document_front: compressedId,
       document_back: null,
       success_parameters: ['id_number']
     }, {
@@ -154,8 +188,8 @@ async function callSpringScanFaceMatch(idImageBase64, selfieBase64) {
     const response = await axios.post(SPRINGSCAN_API_URL, {
       personId: personId,
       docType: docType,
-      document: idImageBase64,  // "document" not "document1"
-      selfie: selfieBase64      // "selfie" not "document2"
+      document: compressedId,
+      selfie: compressedSelfie
     }, {
       headers: {
         'Content-Type': 'application/json',
