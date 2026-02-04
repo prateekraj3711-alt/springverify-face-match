@@ -702,6 +702,8 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
+            text-align: center;
+            pointer-events: none;
         }
 
         .score-number {
@@ -709,14 +711,15 @@
             font-weight: 800;
             line-height: 1;
             letter-spacing: -1px;
+            color: var(--text-primary);
         }
 
         .score-label {
-            font-size: 13px;
+            font-size: 11px;
             color: var(--text-muted);
             text-transform: uppercase;
-            letter-spacing: 1.5px;
-            margin-top: 4px;
+            letter-spacing: 1px;
+            margin-top: 6px;
             font-weight: 600;
         }
 
@@ -1682,7 +1685,7 @@
                             </svg>
                             <div class="score-value">
                                 <span class="score-number" id="scoreNumber">0%</span>
-                                <span class="score-label">Match</span>
+                                <span class="score-label">MATCH SCORE</span>
                             </div>
                         </div>
                     </div>
