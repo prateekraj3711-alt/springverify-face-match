@@ -156,9 +156,11 @@ async function callIdfyFaceMatch(idImageBase64, selfieBase64, docType) {
     const taskId = `face_compare_${Date.now()}`;
 
     // IDfy v2 REST API payload
-    // Task type: 'face_compare' (not 'face_match')
-    // Base64: Raw base64 without data: prefix
-    // Field names: Try common patterns
+    // CRITICAL: IDfy expects URLs (url_1, url_2), not base64 directly
+    // Try data URIs as URLs (workaround to avoid S3 upload)
+    const dataUri1 = `data:image/jpeg;base64,${compressedId}`;
+    const dataUri2 = `data:image/jpeg;base64,${compressedSelfie}`;
+
     const payload = {
       tasks: [
         {
@@ -166,24 +168,18 @@ async function callIdfyFaceMatch(idImageBase64, selfieBase64, docType) {
           task_id: taskId,
           group_id: IDFY_ACCOUNT_ID,
           data: {
-            image1: compressedId,
-            image2: compressedSelfie
+            url_1: dataUri1,
+            url_2: dataUri2
           }
         }
       ]
     };
 
-    console.log('Payload:', JSON.stringify({
-      tasks: [{
-        type: 'face_compare',
-        task_id: taskId,
-        group_id: IDFY_ACCOUNT_ID,
-        data: {
-          image1: `[base64: ${compressedId.length} chars]`,
-          image2: `[base64: ${compressedSelfie.length} chars]`
-        }
-      }]
-    }, null, 2));
+    console.log('Trying: face_compare with url_1/url_2 (data URIs)');
+    console.log('Task ID:', taskId);
+    console.log('Group ID:', IDFY_ACCOUNT_ID);
+    console.log('Image 1 size:', dataUri1.length);
+    console.log('Image 2 size:', dataUri2.length);
 
     const response = await axios.post(
       IDFY_API_URL,
