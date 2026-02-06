@@ -30,7 +30,8 @@ const upload = multer({
 // API Configuration — IDfy Face Match
 const IDFY_API_KEY = process.env.IDFY_API_KEY || '';
 const IDFY_ACCOUNT_ID = process.env.IDFY_ACCOUNT_ID || '';
-const IDFY_GRAPHQL_URL = 'https://tasks.idfy.com/graphql';
+// IDfy v2 REST API endpoint (NOT GraphQL)
+const IDFY_API_URL = 'https://api.idfy.com/v2/tasks';
 
 /**
  * Compress image to ensure it's under SpringScan's size limit
@@ -149,46 +150,29 @@ async function callIdfyFaceMatch(idImageBase64, selfieBase64, docType) {
   console.log('Compressed sizes - ID:', compressedId.length, 'Selfie:', compressedSelfie.length);
 
   try {
-    // IDfy Face Compare - GraphQL API call
-    console.log('Calling IDfy Face Compare API (GraphQL)...');
+    // IDfy Face Match - REST API v2
+    console.log('Calling IDfy Face Match API (REST v2)...');
 
-    const taskId = `face_compare_${Date.now()}`;
+    const taskId = `face_match_${Date.now()}`;
 
-    const graphqlQuery = {
-      query: `
-        mutation {
-          createFaceCompareTask(task: {
-            task_id: "${taskId}",
-            group_id: "${IDFY_ACCOUNT_ID}",
-            data: {
-              doc_base64_1: "${compressedId}",
-              doc_base64_2: "${compressedSelfie}"
-            }
-          }) {
-            error
-            face_1 {
-              quality
-              status
-            }
-            face_2 {
-              quality
-              status
-            }
-            group_id
-            match_band
-            match_score
-            message
-            request_id
-            status
-            task_id
+    // IDfy v2 REST API payload
+    const payload = {
+      tasks: [
+        {
+          type: 'face_match',
+          task_id: taskId,
+          group_id: IDFY_ACCOUNT_ID,
+          data: {
+            doc_base64_1: compressedId,
+            doc_base64_2: compressedSelfie
           }
         }
-      `
+      ]
     };
 
     const response = await axios.post(
-      IDFY_GRAPHQL_URL,
-      graphqlQuery,
+      IDFY_API_URL,
+      payload,
       {
         headers: {
           'Content-Type': 'application/json',
@@ -200,11 +184,17 @@ async function callIdfyFaceMatch(idImageBase64, selfieBase64, docType) {
 
     console.log('IDfy Response:', JSON.stringify(response.data, null, 2).substring(0, 1000));
 
-    const data = response.data?.data?.createFaceCompareTask || {};
+    // IDfy v2 returns array of results
+    const results = response.data;
+    if (!results || results.length === 0) {
+      throw new Error('IDfy API returned no results');
+    }
+
+    const data = results[0]; // Get first task result
 
     // Check for errors
-    if (data.error) {
-      throw new Error(`IDfy Face Compare Error: ${data.error} - ${data.message || 'Unknown error'}`);
+    if (data.error || data.status === 'failure') {
+      throw new Error(`IDfy Face Match Error: ${data.error || data.message || 'Unknown error'}`);
     }
 
     // Extract match score (IDfy returns as string like "99.0")
@@ -251,19 +241,28 @@ async function callIdfyFaceMatch(idImageBase64, selfieBase64, docType) {
           quality: data.face_2?.quality || 'unknown'
         },
         processed_at: new Date().toISOString(),
-        mode: 'idfy-face-compare',
+        mode: 'idfy-rest-v2',
         raw_response: response.data
       }
     };
   } catch (error) {
-    console.error('IDfy API error:', error);
+    console.error('IDfy API error:', error.message);
     console.error('Error response data:', JSON.stringify(error.response?.data, null, 2));
     console.error('Error status:', error.response?.status);
 
-    // Check for GraphQL errors
-    if (error.response?.data?.errors) {
-      const gqlError = error.response.data.errors[0];
-      throw new Error(`IDfy API Error: ${gqlError.message || gqlError.detail || 'Unknown error'}`);
+    // Check for API errors in response
+    if (error.response?.data) {
+      const errorData = error.response.data;
+      // v2 API returns errors in different formats
+      if (Array.isArray(errorData) && errorData[0]?.error) {
+        throw new Error(`IDfy API Error: ${errorData[0].error}`);
+      }
+      if (errorData.error) {
+        throw new Error(`IDfy API Error: ${errorData.error}`);
+      }
+      if (errorData.message) {
+        throw new Error(`IDfy API Error: ${errorData.message}`);
+      }
     }
 
     throw error;
@@ -279,9 +278,9 @@ app.get('/', (req, res) => {
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`\n🔐 SpringVerify Face Match`);
   console.log(`   Running on port ${PORT}`);
-  console.log(`   Face Match API: IDfy Direct (eve.idfy.com)`);
+  console.log(`   Face Match API: IDfy REST v2 (api.idfy.com/v2)`);
   console.log(`   IDfy API Key: ${IDFY_API_KEY ? 'Configured ✓' : 'NOT SET - add IDFY_API_KEY to Replit Secrets'}`);
-  console.log(`   IDfy Account ID: ${IDFY_ACCOUNT_ID ? 'Configured ✓' : 'NOT SET - add IDFY_ACCOUNT_ID to Replit Secrets'}`);
+  console.log(`   IDfy Group ID: ${IDFY_ACCOUNT_ID ? 'Configured ✓' : 'NOT SET - add IDFY_ACCOUNT_ID to Replit Secrets'}`);
   console.log(`   Report: Client-side PDF generation\n`);
 });
 
