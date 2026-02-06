@@ -27,9 +27,10 @@ const upload = multer({
   limits: { fileSize: 20 * 1024 * 1024 }
 });
 
-// API Configuration — SpringScan Face Match
-const SPRINGSCAN_API_URL = 'https://api.springscan.springverify.com/v4/faceMatch';
-const SPRINGSCAN_TOKEN_KEY = process.env.SVD_TOKEN_KEY || '';
+// API Configuration — IDfy Face Match
+const IDFY_API_KEY = process.env.IDFY_API_KEY || '';
+const IDFY_ACCOUNT_ID = process.env.IDFY_ACCOUNT_ID || '';
+const IDFY_BASE_URL = 'https://eve.idfy.com/v3';
 
 /**
  * Compress image to ensure it's under SpringScan's size limit
@@ -101,8 +102,8 @@ app.post('/api/face-match', upload.fields([
       });
     }
 
-    // Always call SpringScan Face Match
-    const result = await callSpringScanFaceMatch(idImageBase64, selfieBase64, docType);
+    // Call IDfy Face Match API directly
+    const result = await callIdfyFaceMatch(idImageBase64, selfieBase64, docType);
     res.json(result);
 
   } catch (error) {
@@ -112,14 +113,8 @@ app.post('/api/face-match', upload.fields([
     console.error('  Status:', status);
     console.error('  Response:', JSON.stringify(detail)?.substring(0, 500));
 
-    // Check for document type mismatch error
-    let userMessage = error.message || 'Internal server error';
-
-    if (status === 422 || detail?.api_status_description?.includes('DocType is not matching')) {
-      userMessage = 'Document type mismatch. Please select the correct document type that matches your uploaded ID.';
-    } else if (detail?.api_status_description?.includes('DocType')) {
-      userMessage = 'Invalid document type. Please choose the correct document type.';
-    }
+    // User-friendly error messages
+    let userMessage = error.message || 'Verification failed. Please try again.';
 
     res.status(status || 500).json({
       success: false,
@@ -130,50 +125,21 @@ app.post('/api/face-match', upload.fields([
 });
 
 /**
- * Create a person in SpringScan
- * Required before calling face match API
+ * IDfy Face Match API
+ * Simple 1-step process: Send 2 images, get match score
+ * No person creation or OCR needed - direct face comparison
  */
-async function createSpringScanPerson() {
-  const timestamp = Date.now();
-  const params = new URLSearchParams({
-    first_name: `FaceMatch`,
-    last_name: `${timestamp}`
-  });
 
-  const response = await axios.post('https://api.springscan.springverify.com/user/person', params, {
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-      'tokenKey': SPRINGSCAN_TOKEN_KEY
-    },
-    timeout: 30000
-  });
-
-  return response.data._id;  // Return the person ID
-}
-
-/**
- * SpringScan Face Match API
- * Correct 3-step flow - Face matching happens automatically during OCR:
- * 1. Create person via /user/person
- * 2. Upload selfie via /user/person/{personId}/selfie (BEFORE OCR)
- * 3. Upload ID via /v4/ocr - returns face match results automatically
- *
- * Key insight: When selfie is already on the person, OCR response includes
- * faceMatched, matchResult, and matchedInformation fields automatically.
- * No need for separate /v4/faceMatch call!
- */
-async function callSpringScanFaceMatch(idImageBase64, selfieBase64, docType) {
-  if (!SPRINGSCAN_TOKEN_KEY) {
-    throw new Error('SpringScan token not configured. Add SVD_TOKEN_KEY to .env or Replit Secrets.');
+async function callIdfyFaceMatch(idImageBase64, selfieBase64, docType) {
+  // Validate IDfy credentials
+  if (!IDFY_API_KEY || !IDFY_ACCOUNT_ID) {
+    throw new Error('IDfy credentials not configured. Add IDFY_API_KEY and IDFY_ACCOUNT_ID to Replit Secrets.');
   }
 
-  if (!docType) {
-    throw new Error('Document type is required');
-  }
+  console.log('Using IDfy Face Match API');
+  console.log('Document type:', docType);
 
-  console.log('Using document type:', docType);
-
-  // Compress images to stay under SpringScan's payload limit
+  // Compress images
   console.log('Compressing images...');
   console.log('Original sizes - ID:', idImageBase64.length, 'Selfie:', selfieBase64.length);
 
@@ -182,98 +148,63 @@ async function callSpringScanFaceMatch(idImageBase64, selfieBase64, docType) {
 
   console.log('Compressed sizes - ID:', compressedId.length, 'Selfie:', compressedSelfie.length);
 
-  console.log('Step 1: Creating person in SpringScan');
-
-  // Step 1: Create a person first
-  const personId = await createSpringScanPerson();
-  console.log('Created person with ID:', personId);
-
   try {
-    // Step 2: Upload selfie FIRST (before OCR)
-    console.log('Step 2: Uploading selfie to person');
-    await axios.post(
-      `https://api.springscan.springverify.com/user/person/${personId}/selfie`,
-      { selfieurl: compressedSelfie },
+    // IDfy Face Match - Simple 1-step API call
+    console.log('Calling IDfy Face Match API...');
+
+    const response = await axios.post(
+      `${IDFY_BASE_URL}/tasks/sync/face_match`,
+      {
+        task_id: `face_match_${Date.now()}`,
+        group_id: IDFY_ACCOUNT_ID,
+        data: {
+          image1: compressedId,
+          image2: compressedSelfie
+        }
+      },
       {
         headers: {
           'Content-Type': 'application/json',
-          'tokenKey': SPRINGSCAN_TOKEN_KEY
+          'api-key': IDFY_API_KEY,
+          'account-id': IDFY_ACCOUNT_ID
         },
         timeout: 60000
       }
     );
-    console.log('Selfie uploaded successfully');
 
-    // Step 3: Upload ID via OCR - face matching happens automatically
-    console.log('Step 3: Uploading ID document via OCR (face match will happen automatically)');
-    const ocrResponse = await axios.post('https://api.springscan.springverify.com/v4/ocr', {
-      personId: personId,
-      docType: docType,
-      document_front: compressedId,
-      document_back: null,
-      success_parameters: ['id_number']
-    }, {
-      headers: {
-        'Content-Type': 'application/json',
-        'tokenKey': SPRINGSCAN_TOKEN_KEY
-      },
-      maxContentLength: Infinity,
-      maxBodyLength: Infinity,
-      timeout: 60000
-    });
+    console.log('IDfy Response:', JSON.stringify(response.data).substring(0, 500));
 
-    console.log('OCR Response (includes face match results):');
-    console.log(JSON.stringify(ocrResponse.data, null, 2));
+    const data = response.data;
+    const result = data.result || {};
 
-    const data = ocrResponse.data;
+    // Extract match score from IDfy response
+    const score = result.match_score || result.confidence || result.score || 0;
+    const faceMatched = result.match === true || score >= 70;
 
-    // Extract face match results from OCR response
-    // OCR response includes: faceMatched, matchResult, matchedInformation
-    const faceMatched = data.faceMatched || false;
-    const matchResult = data.matchResult || data.matchedInformation || {};
-
-    // Extract match score from various possible field names
-    const score = matchResult.confidence || matchResult.score ||
-                  data.match_score || data.score || data.confidence ||
-                  data.matchScore || data.confidenceScore || 0;
-
-    const isMatch = faceMatched || data.isMatch || score >= 70;
     const isHigh = score >= 85;
     const isMedium = score >= 70;
 
     return {
       success: true,
       data: {
-        request_id: data.request_id || data.transactionId || data.id || `SS_${Date.now()}`,
-        person_id: personId,
+        request_id: data.request_id || data.task_id || `IDFY_${Date.now()}`,
         match_score: score,
         match_percentage: score,
         match_band: isHigh ? 'HIGH' : isMedium ? 'MEDIUM' : 'LOW',
-        status: isMatch && score >= 70 ? 'VERIFIED' : score >= 50 ? 'REVIEW' : 'FAILED',
+        status: faceMatched && score >= 70 ? 'VERIFIED' : score >= 50 ? 'REVIEW' : 'FAILED',
         confidence_level: isHigh ? 'HIGH' : isMedium ? 'MEDIUM' : 'LOW',
         face_matched: faceMatched,
-        match_result: matchResult,  // Include full match result object
-        ocr_data: data.ocrData || data.extracted_data || {},  // Include OCR extracted data
-        liveness: { status: data.liveness?.status || 'N/A', confidence: data.liveness?.confidence || 0 },
-        face_1: { detected: data.face_1?.detected ?? true, quality: data.face_1?.quality || 'GOOD' },
-        face_2: { detected: data.face_2?.detected ?? true, quality: data.face_2?.quality || 'GOOD' },
+        match_result: result,
+        liveness: { status: result.liveness?.status || 'N/A', confidence: result.liveness?.confidence || 0 },
+        face_1: { detected: result.face1_detected ?? true, quality: result.face1_quality || 'GOOD' },
+        face_2: { detected: result.face2_detected ?? true, quality: result.face2_quality || 'GOOD' },
         processed_at: new Date().toISOString(),
-        mode: 'springscan-ocr-with-facematch',
+        mode: 'idfy-direct',
         raw_response: data
       }
     };
   } catch (error) {
-    console.error('SpringScan API error:', error);
-
-    // Check for document type mismatch in OCR response
-    const errorMessage = error.response?.data?.api_status_description || error.message;
-
-    if (errorMessage.includes('DocType is not matching') || errorMessage.includes('Entered DocType')) {
-      const friendlyError = new Error('Document type mismatch. The uploaded document does not match the selected type. Please choose the correct document type.');
-      friendlyError.response = error.response;
-      throw friendlyError;
-    }
-
+    console.error('IDfy API error:', error);
     throw error;
   }
 }
@@ -287,8 +218,9 @@ app.get('/', (req, res) => {
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`\n🔐 SpringVerify Face Match`);
   console.log(`   Running on port ${PORT}`);
-  console.log(`   Face Match API: SpringScan /v4/faceMatch`);
-  console.log(`   Token: ${SPRINGSCAN_TOKEN_KEY ? 'Configured ✓' : 'NOT SET - add SVD_TOKEN_KEY to .env'}`);
+  console.log(`   Face Match API: IDfy Direct (eve.idfy.com)`);
+  console.log(`   IDfy API Key: ${IDFY_API_KEY ? 'Configured ✓' : 'NOT SET - add IDFY_API_KEY to Replit Secrets'}`);
+  console.log(`   IDfy Account ID: ${IDFY_ACCOUNT_ID ? 'Configured ✓' : 'NOT SET - add IDFY_ACCOUNT_ID to Replit Secrets'}`);
   console.log(`   Report: Client-side PDF generation\n`);
 });
 

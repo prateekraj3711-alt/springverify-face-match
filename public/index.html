@@ -1713,10 +1713,6 @@
                             <span class="detail-value" id="detailConfidence">High</span>
                         </div>
                         <div class="detail-item">
-                            <span class="detail-label">Liveness Check</span>
-                            <span class="detail-value success" id="detailLiveness">Passed</span>
-                        </div>
-                        <div class="detail-item">
                             <span class="detail-label">Request ID</span>
                             <span class="detail-value" id="detailRequestId">--</span>
                         </div>
@@ -1856,11 +1852,6 @@
                                     <div class="report-dpdf-cell-check report-dpdf-col-check">Verification Status</div>
                                     <div class="report-dpdf-cell report-dpdf-col-dp" id="rptDpStatus">--</div>
                                     <div class="report-dpdf-cell report-dpdf-col-df" id="rptDfStatus">--</div>
-                                </div>
-                                <div class="report-dpdf-row">
-                                    <div class="report-dpdf-cell-check report-dpdf-col-check">Liveness</div>
-                                    <div class="report-dpdf-cell report-dpdf-col-dp" id="rptDpLiveness">--</div>
-                                    <div class="report-dpdf-cell report-dpdf-col-df" id="rptDfLiveness">--</div>
                                 </div>
                                 <div class="report-dpdf-row">
                                     <div class="report-dpdf-cell-check report-dpdf-col-check">Face 1 Quality</div>
@@ -2310,18 +2301,16 @@
             const scoreNum = document.getElementById('scoreNumber');
             const status = document.getElementById('detailStatus');
             const confidence = document.getElementById('detailConfidence');
-            const liveness = document.getElementById('detailLiveness');
             const requestId = document.getElementById('detailRequestId');
             const time = document.getElementById('detailTime');
 
             // Set comparison images
             document.getElementById('resultIdImg').src = state.idImage;
             document.getElementById('resultSelfieImg').src = state.selfieImage;
-            
+
             // Set details
             requestId.textContent = data.request_id ? data.request_id.substring(0, 20) + '...' : '--';
             time.textContent = new Date(data.processed_at).toLocaleString();
-            liveness.textContent = data.liveness?.status || 'N/A';
 
             // Determine result type based on API response
             let resultClass, iconPath, titleText, subtitleText, statusText, confidenceText, confidenceClass;
@@ -2368,8 +2357,6 @@
             status.className = 'detail-value ' + confidenceClass;
             confidence.textContent = confidenceText;
             confidence.className = 'detail-value ' + confidenceClass;
-            liveness.className = 'detail-value success';
-
             // Animate score
             const circumference = 2 * Math.PI * 68; // 427
             const offset = circumference - (score / 100) * circumference;
@@ -2416,7 +2403,6 @@
 
             const reqId = data.request_id || '--';
             const matchBand = data.match_band || '--';
-            const livenessStatus = data.liveness?.status || 'PASSED';
             const face1Quality = data.face_1?.quality || 'GOOD';
             const face2Quality = data.face_2?.quality || 'GOOD';
 
@@ -2464,10 +2450,6 @@
             // Verification Status
             document.getElementById('rptDpStatus').innerHTML = 'Result';
             document.getElementById('rptDfStatus').innerHTML = statusSvg + ' ' + statusText;
-
-            // Liveness
-            document.getElementById('rptDpLiveness').innerHTML = 'Status';
-            document.getElementById('rptDfLiveness').innerHTML = (livenessStatus === 'PASSED' ? tickSvg : warnSvg) + ' ' + livenessStatus;
 
             // Face 1 Quality
             document.getElementById('rptDpFace1').innerHTML = 'Quality';
