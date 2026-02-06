@@ -30,8 +30,8 @@ const upload = multer({
 // API Configuration — IDfy Face Match
 const IDFY_API_KEY = process.env.IDFY_API_KEY || '';
 const IDFY_ACCOUNT_ID = process.env.IDFY_ACCOUNT_ID || '';
-// IDfy v2 REST API endpoint (NOT GraphQL)
-const IDFY_API_URL = 'https://api.idfy.com/v2/tasks';
+// IDfy v3 Face Compare endpoint (correct endpoint from documentation)
+const IDFY_API_URL = 'https://eve.idfy.com/v3/tasks/async/compare/face';
 
 /**
  * Compress image to ensure it's under SpringScan's size limit
@@ -155,31 +155,25 @@ async function callIdfyFaceMatch(idImageBase64, selfieBase64, docType) {
 
     const taskId = `face_compare_${Date.now()}`;
 
-    // IDfy v2 REST API payload
-    // CRITICAL: IDfy expects URLs (url_1, url_2), not base64 directly
-    // Try data URIs as URLs (workaround to avoid S3 upload)
+    // IDfy v3 Face Compare API payload (correct format from documentation)
+    // Uses data URIs for document1/document2 (supports both URL and base64)
     const dataUri1 = `data:image/jpeg;base64,${compressedId}`;
     const dataUri2 = `data:image/jpeg;base64,${compressedSelfie}`;
 
     const payload = {
-      tasks: [
-        {
-          type: 'face_compare',
-          task_id: taskId,
-          group_id: IDFY_ACCOUNT_ID,
-          data: {
-            url_1: dataUri1,
-            url_2: dataUri2
-          }
-        }
-      ]
+      task_id: taskId,
+      group_id: IDFY_ACCOUNT_ID,
+      data: {
+        document1: dataUri1,
+        document2: dataUri2
+      }
     };
 
-    console.log('Trying: face_compare with url_1/url_2 (data URIs)');
+    console.log('Calling IDfy v3 Face Compare (eve.idfy.com)');
     console.log('Task ID:', taskId);
     console.log('Group ID:', IDFY_ACCOUNT_ID);
-    console.log('Image 1 size:', dataUri1.length);
-    console.log('Image 2 size:', dataUri2.length);
+    console.log('Document 1 size:', dataUri1.length);
+    console.log('Document 2 size:', dataUri2.length);
 
     const response = await axios.post(
       IDFY_API_URL,
@@ -187,7 +181,8 @@ async function callIdfyFaceMatch(idImageBase64, selfieBase64, docType) {
       {
         headers: {
           'Content-Type': 'application/json',
-          'apikey': IDFY_API_KEY
+          'api-key': IDFY_API_KEY,
+          'account-id': IDFY_ACCOUNT_ID
         },
         timeout: 60000
       }
@@ -204,10 +199,10 @@ async function callIdfyFaceMatch(idImageBase64, selfieBase64, docType) {
       console.log('Polling for results...');
 
       // Poll for results using request_id
-      // IDfy typically uses /request/{id} for polling async tasks
-      const pollUrl = `https://api.idfy.com/v2/request/${responseData.request_id}`;
+      // IDfy v3 polling endpoint pattern
+      const pollUrl = `https://eve.idfy.com/v3/tasks?request_id=${responseData.request_id}`;
       let attempts = 0;
-      const maxAttempts = 20; // 20 attempts = ~20 seconds
+      const maxAttempts = 30; // 30 attempts = ~30 seconds
 
       console.log('Poll URL:', pollUrl);
 
@@ -220,7 +215,8 @@ async function callIdfyFaceMatch(idImageBase64, selfieBase64, docType) {
         try {
           const pollResponse = await axios.get(pollUrl, {
             headers: {
-              'apikey': IDFY_API_KEY
+              'api-key': IDFY_API_KEY,
+              'account-id': IDFY_ACCOUNT_ID
             }
           });
 
