@@ -150,8 +150,8 @@ async function callIdfyFaceMatch(idImageBase64, selfieBase64, docType) {
   console.log('Compressed sizes - ID:', compressedId.length, 'Selfie:', compressedSelfie.length);
 
   try {
-    // IDfy Face Compare - REST API v2
-    console.log('Calling IDfy Face Compare API (REST v2)...');
+    // IDfy Face Compare - v3 API
+    console.log('=== Calling IDfy v3 Face Compare API ===');
 
     const taskId = `face_compare_${Date.now()}`;
 
@@ -188,13 +188,16 @@ async function callIdfyFaceMatch(idImageBase64, selfieBase64, docType) {
       }
     );
 
-    console.log('IDfy Response:', JSON.stringify(response.data, null, 2).substring(0, 1000));
+    console.log('=== IDfy Initial Response ===');
+    console.log(JSON.stringify(response.data, null, 2));
+    console.log('Response status:', response.status);
+    console.log('=============================');
 
-    // IDfy v2 async response: { request_id: "...", status: 202 }
+    // IDfy v3 async response: { request_id: "..." } (no status field in v3)
     const responseData = response.data;
 
-    // Check if it's an async response (status 202)
-    if (responseData.status === 202 && responseData.request_id) {
+    // Check if it's an async response (has request_id, which means async)
+    if (responseData.request_id) {
       console.log('Task accepted (async). Request ID:', responseData.request_id);
       console.log('Polling for results...');
 
@@ -221,7 +224,9 @@ async function callIdfyFaceMatch(idImageBase64, selfieBase64, docType) {
           });
 
           const pollData = pollResponse.data;
-          console.log('Poll response:', JSON.stringify(pollData).substring(0, 500));
+          console.log('=== Poll Response ===');
+          console.log(JSON.stringify(pollData, null, 2));
+          console.log('====================');
 
           // Check if task is complete
           if (pollData.status === 'completed' || pollData.status === 'success') {
@@ -255,6 +260,10 @@ async function callIdfyFaceMatch(idImageBase64, selfieBase64, docType) {
     // Extract result data
     const data = responseData.taskData || responseData;
 
+    console.log('=== Final Data to Parse ===');
+    console.log(JSON.stringify(data, null, 2));
+    console.log('===========================');
+
     // Check for errors
     if (data.error || data.status === 'failure' || data.status === 'failed') {
       throw new Error(`IDfy Face Match Error: ${data.error || data.message || 'Unknown error'}`);
@@ -262,6 +271,7 @@ async function callIdfyFaceMatch(idImageBase64, selfieBase64, docType) {
 
     // Extract match score (IDfy returns as string like "99.0")
     const score = parseFloat(data.match_score) || 0;
+    console.log('Extracted score:', score);
 
     // IDfy match_band: green=high, yellow=medium, red=low, gray=unable
     const matchBand = data.match_band?.toLowerCase() || 'gray';
