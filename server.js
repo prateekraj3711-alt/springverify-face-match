@@ -150,25 +150,40 @@ async function callIdfyFaceMatch(idImageBase64, selfieBase64, docType) {
   console.log('Compressed sizes - ID:', compressedId.length, 'Selfie:', compressedSelfie.length);
 
   try {
-    // IDfy Face Match - REST API v2
-    console.log('Calling IDfy Face Match API (REST v2)...');
+    // IDfy Face Compare - REST API v2
+    console.log('Calling IDfy Face Compare API (REST v2)...');
 
-    const taskId = `face_match_${Date.now()}`;
+    const taskId = `face_compare_${Date.now()}`;
 
     // IDfy v2 REST API payload
+    // Task type: 'face_compare' (not 'face_match')
+    // Base64: Raw base64 without data: prefix
+    // Field names: Try common patterns
     const payload = {
       tasks: [
         {
-          type: 'face_match',
+          type: 'face_compare',
           task_id: taskId,
           group_id: IDFY_ACCOUNT_ID,
           data: {
-            doc_base64_1: compressedId,
-            doc_base64_2: compressedSelfie
+            image1: compressedId,
+            image2: compressedSelfie
           }
         }
       ]
     };
+
+    console.log('Payload:', JSON.stringify({
+      tasks: [{
+        type: 'face_compare',
+        task_id: taskId,
+        group_id: IDFY_ACCOUNT_ID,
+        data: {
+          image1: `[base64: ${compressedId.length} chars]`,
+          image2: `[base64: ${compressedSelfie.length} chars]`
+        }
+      }]
+    }, null, 2));
 
     const response = await axios.post(
       IDFY_API_URL,
