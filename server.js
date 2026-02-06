@@ -30,7 +30,7 @@ const upload = multer({
 // API Configuration — IDfy Face Match
 const IDFY_API_KEY = process.env.IDFY_API_KEY || '';
 const IDFY_ACCOUNT_ID = process.env.IDFY_ACCOUNT_ID || '';
-const IDFY_BASE_URL = 'https://eve.idfy.com/v3';
+const IDFY_GRAPHQL_URL = 'https://tasks.idfy.com/graphql';
 
 /**
  * Compress image to ensure it's under SpringScan's size limit
@@ -149,62 +149,123 @@ async function callIdfyFaceMatch(idImageBase64, selfieBase64, docType) {
   console.log('Compressed sizes - ID:', compressedId.length, 'Selfie:', compressedSelfie.length);
 
   try {
-    // IDfy Face Match - Simple 1-step API call
-    console.log('Calling IDfy Face Match API...');
+    // IDfy Face Compare - GraphQL API call
+    console.log('Calling IDfy Face Compare API (GraphQL)...');
+
+    const taskId = `face_compare_${Date.now()}`;
+
+    const graphqlQuery = {
+      query: `
+        mutation {
+          createFaceCompareTask(task: {
+            task_id: "${taskId}",
+            group_id: "${IDFY_ACCOUNT_ID}",
+            data: {
+              doc_base64_1: "${compressedId}",
+              doc_base64_2: "${compressedSelfie}"
+            }
+          }) {
+            error
+            face_1 {
+              quality
+              status
+            }
+            face_2 {
+              quality
+              status
+            }
+            group_id
+            match_band
+            match_score
+            message
+            request_id
+            status
+            task_id
+          }
+        }
+      `
+    };
 
     const response = await axios.post(
-      `${IDFY_BASE_URL}/tasks/sync/face_match`,
-      {
-        task_id: `face_match_${Date.now()}`,
-        group_id: IDFY_ACCOUNT_ID,
-        data: {
-          image1: compressedId,
-          image2: compressedSelfie
-        }
-      },
+      IDFY_GRAPHQL_URL,
+      graphqlQuery,
       {
         headers: {
           'Content-Type': 'application/json',
-          'api-key': IDFY_API_KEY,
-          'account-id': IDFY_ACCOUNT_ID
+          'apikey': IDFY_API_KEY
         },
         timeout: 60000
       }
     );
 
-    console.log('IDfy Response:', JSON.stringify(response.data).substring(0, 500));
+    console.log('IDfy Response:', JSON.stringify(response.data, null, 2).substring(0, 1000));
 
-    const data = response.data;
-    const result = data.result || {};
+    const data = response.data?.data?.createFaceCompareTask || {};
 
-    // Extract match score from IDfy response
-    const score = result.match_score || result.confidence || result.score || 0;
-    const faceMatched = result.match === true || score >= 70;
+    // Check for errors
+    if (data.error) {
+      throw new Error(`IDfy Face Compare Error: ${data.error} - ${data.message || 'Unknown error'}`);
+    }
 
-    const isHigh = score >= 85;
-    const isMedium = score >= 70;
+    // Extract match score (IDfy returns as string like "99.0")
+    const score = parseFloat(data.match_score) || 0;
+
+    // IDfy match_band: green=high, yellow=medium, red=low, gray=unable
+    const matchBand = data.match_band?.toLowerCase() || 'gray';
+    const faceMatched = matchBand === 'green' || matchBand === 'yellow';
+
+    // Map IDfy's match_band to our confidence levels
+    let confidenceLevel, status;
+    if (matchBand === 'green') {
+      confidenceLevel = 'HIGH';
+      status = 'VERIFIED';
+    } else if (matchBand === 'yellow') {
+      confidenceLevel = 'MEDIUM';
+      status = 'REVIEW';
+    } else {
+      confidenceLevel = 'LOW';
+      status = 'FAILED';
+    }
 
     return {
       success: true,
       data: {
-        request_id: data.request_id || data.task_id || `IDFY_${Date.now()}`,
+        request_id: data.request_id || data.task_id || taskId,
         match_score: score,
         match_percentage: score,
-        match_band: isHigh ? 'HIGH' : isMedium ? 'MEDIUM' : 'LOW',
-        status: faceMatched && score >= 70 ? 'VERIFIED' : score >= 50 ? 'REVIEW' : 'FAILED',
-        confidence_level: isHigh ? 'HIGH' : isMedium ? 'MEDIUM' : 'LOW',
+        match_band: matchBand.toUpperCase(),
+        status: status,
+        confidence_level: confidenceLevel,
         face_matched: faceMatched,
-        match_result: result,
-        liveness: { status: result.liveness?.status || 'N/A', confidence: result.liveness?.confidence || 0 },
-        face_1: { detected: result.face1_detected ?? true, quality: result.face1_quality || 'GOOD' },
-        face_2: { detected: result.face2_detected ?? true, quality: result.face2_quality || 'GOOD' },
+        match_result: {
+          match_band: data.match_band,
+          match_score: data.match_score
+        },
+        liveness: { status: 'N/A', confidence: 0 },
+        face_1: {
+          detected: data.face_1?.status === 'face_detected',
+          quality: data.face_1?.quality || 'unknown'
+        },
+        face_2: {
+          detected: data.face_2?.status === 'face_detected',
+          quality: data.face_2?.quality || 'unknown'
+        },
         processed_at: new Date().toISOString(),
-        mode: 'idfy-direct',
-        raw_response: data
+        mode: 'idfy-face-compare',
+        raw_response: response.data
       }
     };
   } catch (error) {
     console.error('IDfy API error:', error);
+    console.error('Error response data:', JSON.stringify(error.response?.data, null, 2));
+    console.error('Error status:', error.response?.status);
+
+    // Check for GraphQL errors
+    if (error.response?.data?.errors) {
+      const gqlError = error.response.data.errors[0];
+      throw new Error(`IDfy API Error: ${gqlError.message || gqlError.detail || 'Unknown error'}`);
+    }
+
     throw error;
   }
 }
