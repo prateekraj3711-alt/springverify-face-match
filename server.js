@@ -195,16 +195,56 @@ async function callIdfyFaceMatch(idImageBase64, selfieBase64, docType) {
 
     console.log('IDfy Response:', JSON.stringify(response.data, null, 2).substring(0, 1000));
 
-    // IDfy v2 returns array of results
-    const results = response.data;
-    if (!results || results.length === 0) {
-      throw new Error('IDfy API returned no results');
+    // IDfy v2 async response: { request_id: "...", status: 202 }
+    const responseData = response.data;
+
+    // Check if it's an async response (status 202)
+    if (responseData.status === 202 && responseData.request_id) {
+      console.log('Task accepted (async). Request ID:', responseData.request_id);
+      console.log('Polling for results...');
+
+      // Poll for results using request_id
+      const pollUrl = `${IDFY_API_URL}/${responseData.request_id}`;
+      let attempts = 0;
+      const maxAttempts = 20; // 20 attempts = ~20 seconds
+
+      while (attempts < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
+        attempts++;
+
+        console.log(`Polling attempt ${attempts}/${maxAttempts}...`);
+
+        const pollResponse = await axios.get(pollUrl, {
+          headers: {
+            'apikey': IDFY_API_KEY
+          }
+        });
+
+        const pollData = pollResponse.data;
+        console.log('Poll response:', JSON.stringify(pollData).substring(0, 500));
+
+        // Check if task is complete
+        if (pollData.status === 'completed' || pollData.status === 'success') {
+          // Task complete, use this data
+          responseData.taskData = pollData;
+          break;
+        } else if (pollData.status === 'failed' || pollData.status === 'failure') {
+          throw new Error(`IDfy task failed: ${pollData.error || pollData.message || 'Unknown error'}`);
+        }
+
+        // Continue polling if status is still 'in_progress' or 'pending'
+      }
+
+      if (attempts >= maxAttempts) {
+        throw new Error('Timeout waiting for IDfy task completion');
+      }
     }
 
-    const data = results[0]; // Get first task result
+    // Extract result data
+    const data = responseData.taskData || responseData;
 
     // Check for errors
-    if (data.error || data.status === 'failure') {
+    if (data.error || data.status === 'failure' || data.status === 'failed') {
       throw new Error(`IDfy Face Match Error: ${data.error || data.message || 'Unknown error'}`);
     }
 
