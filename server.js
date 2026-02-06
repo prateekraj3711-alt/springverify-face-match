@@ -156,24 +156,21 @@ async function callIdfyFaceMatch(idImageBase64, selfieBase64, docType) {
     const taskId = `face_compare_${Date.now()}`;
 
     // IDfy v3 Face Compare API payload (correct format from documentation)
-    // Uses data URIs for document1/document2 (supports both URL and base64)
-    const dataUri1 = `data:image/jpeg;base64,${compressedId}`;
-    const dataUri2 = `data:image/jpeg;base64,${compressedSelfie}`;
-
+    // Try raw base64 strings (IDfy rejects data URIs with INVALID_IMAGE error)
     const payload = {
       task_id: taskId,
       group_id: IDFY_ACCOUNT_ID,
       data: {
-        document1: dataUri1,
-        document2: dataUri2
+        document1: compressedId,
+        document2: compressedSelfie
       }
     };
 
     console.log('Calling IDfy v3 Face Compare (eve.idfy.com)');
     console.log('Task ID:', taskId);
     console.log('Group ID:', IDFY_ACCOUNT_ID);
-    console.log('Document 1 size:', dataUri1.length);
-    console.log('Document 2 size:', dataUri2.length);
+    console.log('Document 1 size (base64):', compressedId.length);
+    console.log('Document 2 size (base64):', compressedSelfie.length);
 
     const response = await axios.post(
       IDFY_API_URL,
@@ -223,10 +220,15 @@ async function callIdfyFaceMatch(idImageBase64, selfieBase64, docType) {
             }
           });
 
-          const pollData = pollResponse.data;
+          let pollData = pollResponse.data;
           console.log('=== Poll Response ===');
           console.log(JSON.stringify(pollData, null, 2));
           console.log('====================');
+
+          // IDfy v3 returns array, get first item
+          if (Array.isArray(pollData) && pollData.length > 0) {
+            pollData = pollData[0];
+          }
 
           // Check if task is complete
           if (pollData.status === 'completed' || pollData.status === 'success') {
@@ -234,7 +236,9 @@ async function callIdfyFaceMatch(idImageBase64, selfieBase64, docType) {
             responseData.taskData = pollData;
             break;
           } else if (pollData.status === 'failed' || pollData.status === 'failure') {
-            throw new Error(`IDfy task failed: ${pollData.error || pollData.message || 'Unknown error'}`);
+            // Task failed - throw error with details
+            const errorMsg = pollData.message || pollData.error || 'Unknown error';
+            throw new Error(`IDfy task failed: ${pollData.error} - ${errorMsg}`);
           }
 
           // Continue polling if status is still 'in_progress' or 'pending'
