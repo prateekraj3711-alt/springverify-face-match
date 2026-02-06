@@ -273,25 +273,31 @@ async function callIdfyFaceMatch(idImageBase64, selfieBase64, docType) {
       throw new Error(`IDfy Face Match Error: ${data.error || data.message || 'Unknown error'}`);
     }
 
-    // Extract match score (IDfy returns as string like "99.0")
-    const score = parseFloat(data.match_score) || 0;
+    // Extract result object from IDfy v3 response
+    const result = data.result || {};
+
+    // Extract match score (IDfy v3 returns as number like 99.48)
+    const score = parseFloat(result.match_score) || 0;
     console.log('Extracted score:', score);
 
-    // IDfy match_band: green=high, yellow=medium, red=low, gray=unable
-    const matchBand = data.match_band?.toLowerCase() || 'gray';
-    const faceMatched = matchBand === 'green' || matchBand === 'yellow';
+    // IDfy v3 uses is_a_match (boolean) and review_recommended instead of match_band
+    const isMatch = result.is_a_match === true;
+    const reviewRecommended = result.review_recommended === true;
 
-    // Map IDfy's match_band to our confidence levels
-    let confidenceLevel, status;
-    if (matchBand === 'green') {
+    // Map to our confidence levels based on score and flags
+    let confidenceLevel, status, matchBand;
+    if (isMatch && !reviewRecommended && score >= 85) {
       confidenceLevel = 'HIGH';
       status = 'VERIFIED';
-    } else if (matchBand === 'yellow') {
+      matchBand = 'GREEN';
+    } else if (isMatch && (reviewRecommended || score >= 70)) {
       confidenceLevel = 'MEDIUM';
       status = 'REVIEW';
+      matchBand = 'YELLOW';
     } else {
       confidenceLevel = 'LOW';
       status = 'FAILED';
+      matchBand = 'RED';
     }
 
     return {
@@ -300,26 +306,27 @@ async function callIdfyFaceMatch(idImageBase64, selfieBase64, docType) {
         request_id: data.request_id || data.task_id || taskId,
         match_score: score,
         match_percentage: score,
-        match_band: matchBand.toUpperCase(),
+        match_band: matchBand,
         status: status,
         confidence_level: confidenceLevel,
-        face_matched: faceMatched,
+        face_matched: isMatch,
         match_result: {
-          match_band: data.match_band,
-          match_score: data.match_score
+          is_a_match: result.is_a_match,
+          match_score: result.match_score,
+          review_recommended: result.review_recommended
         },
         liveness: { status: 'N/A', confidence: 0 },
         face_1: {
-          detected: data.face_1?.status === 'face_detected',
-          quality: data.face_1?.quality || 'unknown'
+          detected: result.image_1?.face_detected === true,
+          quality: result.image_1?.face_quality || 'unknown'
         },
         face_2: {
-          detected: data.face_2?.status === 'face_detected',
-          quality: data.face_2?.quality || 'unknown'
+          detected: result.image_2?.face_detected === true,
+          quality: result.image_2?.face_quality || 'unknown'
         },
-        processed_at: new Date().toISOString(),
-        mode: 'idfy-rest-v2',
-        raw_response: response.data
+        processed_at: data.completed_at || new Date().toISOString(),
+        mode: 'idfy-v3-async',
+        raw_response: data
       }
     };
   } catch (error) {
